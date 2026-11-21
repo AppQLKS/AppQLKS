@@ -1,80 +1,57 @@
-:root {
-  --bg: #f7f5f0;
-  --surface: #ffffff;
-  --border: #ebe7df;
-  --text: #1a1a1a;
-  --muted: #6b6b6b;
-  --primary: #1f4733;
-  --primary-ink: #ffffff;
-  --peach: #fde9dc;
-  --peach-ink: #c0703d;
-  --mint: #dcf3e6;
-  --mint-ink: #1f7a4d;
-  --slot: #efede8;
-  --radius: 16px;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  color: var(--text);
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.material-symbols-outlined {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  line-height: 1 !important;
+  box-sizing: content-box;
+  overflow: hidden;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; background: #e9e6df; }
-h1 { font-size: 24px; font-weight: 800; margin: 4px 0 8px; }
-h2 { font-size: 16px; margin: 20px 0 10px; }
-p { margin: 4px 0; }
-code { font-family: var(--mono); }
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
-.center { text-align: center; }
-.mono { font-family: var(--mono); }
-.error { color: #b91c1c; }
-.row-between { display: flex; justify-content: space-between; align-items: center; }
+/* Ẩn thanh cuộn ngang của hàng pill nhưng vẫn cuộn được */
+[role='tablist'] {
+  scrollbar-width: none;
+}
+[role='tablist']::-webkit-scrollbar {
+  display: none;
+}
 
-/* Khung điện thoại: full màn hình trên mobile, căn giữa trên desktop */
-.phone { max-width: 430px; min-height: 100vh; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; }
-.screen { flex: 1; padding: 20px 16px 24px; }
+.icon-filled {
+  font-variation-settings: 'FILL' 1;
+}
 
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-
-.btn { width: 100%; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-weight: 700; cursor: pointer; }
-.btn-primary { background: var(--primary); color: var(--primary-ink); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-outline { background: var(--surface); border: 1px solid var(--border); color: var(--text); font-weight: 600; }
-
-.pill { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.pill-mint { background: var(--mint); color: var(--mint-ink); }
-
-/* Login */
-.login { display: flex; flex-direction: column; align-items: center; padding-top: 40px; }
-.login .card { width: 100%; margin-top: 32px; display: flex; flex-direction: column; gap: 14px; }
-.logo { width: 56px; height: 56px; border-radius: 16px; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 22px; }
-.eyebrow { letter-spacing: 0.12em; font-size: 11px; color: var(--muted); margin-top: 16px; }
-.label { font-weight: 600; }
-.code-boxes { display: flex; justify-content: space-between; align-items: center; }
-.code-slot { display: flex; align-items: center; gap: 6px; }
-.code-dash { color: var(--muted); }
-.code-box { width: 40px; height: 50px; border: 1px solid transparent; border-radius: 10px; background: var(--slot); text-align: center; font-family: var(--mono); font-size: 20px; font-weight: 700; }
-.code-box:focus { outline: none; border-color: var(--primary); background: #fff; }
-.divider { display: flex; align-items: center; gap: 10px; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-/* Home */
-.service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.service { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
-.icon-tile { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 8px; }
-.icon-tile.peach { background: var(--peach); }
-.icon-tile.mint { background: var(--mint); }
-
-/* Dining */
-.chips { display: flex; gap: 8px; overflow-x: auto; margin: 14px 0; }
-.chip { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
-.chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.list { display: flex; flex-direction: column; gap: 12px; }
-.menu-item { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
-.price { font-weight: 700; }
-.add-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--primary); color: #fff; font-size: 18px; cursor: pointer; flex-shrink: 0; }
-
-/* Tab bar */
-.tabbar { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); }
-.tab { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); text-decoration: none; }
-.tab.active { color: var(--primary); font-weight: 700; }
+@layer components {
+  .card {
+    @apply bg-surface-container-lowest rounded-lg shadow-sm border border-outline-variant/60;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-sm rounded-md bg-primary text-on-primary font-label text-label-lg
+      hover:opacity-95 active:scale-[0.99] transition duration-state-change ease-state-change
+      disabled:opacity-50 disabled:cursor-not-allowed
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-sm rounded-md bg-surface-container-lowest text-primary border border-outline-variant font-label text-label-lg
+      hover:bg-surface-container-low active:scale-[0.99] transition duration-state-change ease-state-change
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+  .pill {
+    @apply px-lg py-sm rounded-full font-label text-label-md whitespace-nowrap transition-colors duration-state-change;
+  }
+  .pill-active {
+    @apply bg-primary text-on-primary;
+  }
+  .pill-idle {
+    @apply bg-surface-container-lowest text-on-surface-variant border border-outline-variant hover:border-accent;
+  }
+  .input {
+    @apply w-full px-lg py-md rounded-md bg-surface-container-low border border-outline-variant text-body-md text-on-surface
+      placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary;
+  }
+}

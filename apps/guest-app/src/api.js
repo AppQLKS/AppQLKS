@@ -8,3 +8,6 @@ export async function api(path, options = {}) {
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return data;
 }
+
+// Phòng demo cho tới khi feature/guest-auth-room-code có phiên đăng nhập thật
+export const DEMO_ROOM = '305';
