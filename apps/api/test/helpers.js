@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 
 /** Khởi động API trên cổng ngẫu nhiên; trả về các hàm gọi tiện dụng. */
-export async function startApi() {
-  const server = createApp().listen(0);
+export async function startApi(options) {
+  const server = createApp(options).listen(0);
   await new Promise((r) => server.once('listening', r));
   const base = `http://127.0.0.1:${server.address().port}/api`;
 
