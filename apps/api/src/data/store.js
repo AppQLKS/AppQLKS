@@ -26,7 +26,10 @@ export function findStaff(id) {
 
 /** Yêu cầu kèm department + thông tin nhân viên được giao. */
 export function presentRequest(req) {
-  return { ...req, department: departmentOf(req.type), assignee: req.assignedTo ? findStaff(req.assignedTo) : null };
+  const staff = req.assignedTo ? findStaff(req.assignedTo) : null;
+  // Chỉ lộ thông tin công khai của nhân viên (không bao giờ kèm passwordHash/email)
+  const assignee = staff ? { id: staff.id, name: staff.name, department: staff.department } : null;
+  return { ...req, department: departmentOf(req.type), assignee };
 }
 
 /** Mã yêu cầu tiếp theo: REQ-<số lớn nhất + 1>. */

@@ -43,7 +43,8 @@ test('guest places an order priced by the server, merged per dish', async () => 
   assert.equal(req.etaMinutes, 28);
 
   // Hiện trong hàng đợi bếp và hoá đơn phòng
-  const kitchen = await (await fetch(`${base}/requests?department=kitchen`)).json();
+  const { token: staff } = await (await post('/auth/staff', { login: 'KT-02', password: 'shift2026' })).json();
+  const kitchen = await (await fetch(`${base}/requests?department=kitchen`, { headers: { Authorization: `Bearer ${staff}` } })).json();
   assert.equal(kitchen[0].id, req.id);
   const folio = await (await fetch(`${base}/me/folio`, { headers: { Authorization: `Bearer ${token}` } })).json();
   assert.ok(folio.lines.some((l) => l.requestId === req.id && l.amount === 36));

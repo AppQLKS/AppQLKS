@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { api } from '../api.js';
-import { ROLES, useStaff } from '../staff.jsx';
+import { useStaff } from '../staff.jsx';
 import { Icon, initials } from './ui.jsx';
 
 export default function Layout() {
-  const { staff, setStaff } = useStaff();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const { staff, role, logout } = useStaff();
   const [rooms, setRooms] = useState([]);
   const [requests, setRequests] = useState([]);
   const [error, setError] = useState('');
@@ -47,40 +46,9 @@ export default function Layout() {
             </div>
           </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              aria-expanded={menuOpen}
-              aria-haspopup="listbox"
-              onClick={() => setMenuOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 px-gutter-md py-gutter-sm rounded bg-sidebar-active border border-sidebar-muted/25 hover:border-sidebar-muted/50 transition-colors duration-state-change"
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full bg-status-emerald shrink-0" aria-hidden="true" />
-                <span className="text-label-md truncate">Role: {staff.role}</span>
-              </span>
-              <Icon name="unfold_more" className="text-[18px] text-sidebar-muted shrink-0" />
-            </button>
-            {menuOpen && (
-              <div role="listbox" aria-label="Switch staff role" className="absolute left-0 right-0 mt-1.5 bg-surface-low text-on-surface border border-outline-variant rounded shadow-lg z-30 py-1">
-                {ROLES.map((r) => (
-                  <button
-                    key={r.role}
-                    type="button"
-                    role="option"
-                    aria-selected={r.role === staff.role}
-                    onClick={() => {
-                      setStaff(r);
-                      setMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-label-md hover:bg-surface-container flex items-center justify-between"
-                  >
-                    <span>{r.role}</span>
-                    <span className="text-body-sm text-on-surface-variant">{r.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="w-full flex items-center gap-2 px-gutter-md py-gutter-sm rounded bg-sidebar-active border border-sidebar-muted/25">
+            <span className="w-2 h-2 rounded-full bg-status-emerald shrink-0" aria-hidden="true" />
+            <span className="text-label-md truncate">Role: {role}</span>
           </div>
 
           <nav aria-label="Main navigation" className="flex flex-col gap-gutter-xs">
@@ -110,10 +78,19 @@ export default function Layout() {
 
         <div className="p-gutter-xl border-t border-sidebar-active hidden lg:flex items-center gap-gutter-md">
           <div className="w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-md shrink-0">{initials(staff.name)}</div>
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-label-lg truncate">{staff.name}</span>
-            <span className="text-label-sm text-sidebar-muted truncate">{staff.role} · Evening Shift</span>
+            <span className="text-label-sm text-sidebar-muted truncate">{role} · {staff.id}</span>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Sign out"
+            title="Sign out"
+            className="inline-flex items-center justify-center w-8 h-8 rounded text-sidebar-muted hover:bg-sidebar-active hover:text-on-brand-slate transition-colors duration-state-change"
+          >
+            <Icon name="logout" className="text-[18px]" />
+          </button>
         </div>
       </aside>
 
@@ -133,7 +110,7 @@ export default function Layout() {
             </span>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container border border-outline-variant">
               <Icon name="person" className="text-[16px] text-on-surface-variant" />
-              <span className="text-label-md">{staff.name} ({staff.role})</span>
+              <span className="text-label-md">{staff.name} ({role})</span>
             </div>
           </div>
         </header>

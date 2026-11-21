@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api.js';
+import { staffApi } from '../../api.js';
 import { BottomNav, Icon, formatCode, money } from '../../components/ui.jsx';
 import { STAFF_NAV } from './staffNav.js';
 
@@ -18,13 +18,13 @@ export default function ReceptionRooms() {
   const [bannerFolio, setBannerFolio] = useState(null);
 
   useEffect(() => {
-    api('/rooms').then(setRooms).catch(() => {});
-    api('/rooms/305').then((r) => setBannerFolio(r.folio)).catch(() => {});
+    staffApi('/rooms').then(setRooms).catch(() => {});
+    staffApi('/rooms/305').then((r) => setBannerFolio(r.folio)).catch(() => {});
   }, []);
 
   useEffect(() => {
     setRevoked(false);
-    api(`/rooms/${selected}`).then(setDetail).catch(() => setDetail(null));
+    staffApi(`/rooms/${selected}`).then(setDetail).catch(() => setDetail(null));
   }, [selected]);
 
   const occupied = rooms.filter((r) => r.status === 'occupied').length;

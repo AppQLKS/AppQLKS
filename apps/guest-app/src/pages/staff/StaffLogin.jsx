@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, Logo } from '../../components/ui.jsx';
+import { useStaffAuth } from '../../staffAuth.jsx';
+
+const homeFor = (department) => (department === 'reception' ? '/staff/rooms' : '/staff/tasks');
 
 const ROLES = [
   { id: 'housekeeping', label: 'Housekeeping' },
@@ -11,12 +14,27 @@ const ROLES = [
 export default function StaffLogin() {
   const [role, setRole] = useState('housekeeping');
   const [showPwd, setShowPwd] = useState(false);
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session, login: signIn, expired } = useStaffAuth();
 
-  const submit = (e) => {
+  if (session?.token && !busy) return <Navigate to={homeFor(session.staff.department)} replace />;
+
+  const submit = async (e) => {
     e.preventDefault();
-    // TODO(feature/staff-web-portal): POST /api/auth/staff { staffId, password, department }
-    navigate(role === 'reception' ? '/staff/rooms' : '/staff/tasks');
+    setBusy(true);
+    setError('');
+    try {
+      const staff = await signIn({ login, password, department: role });
+      navigate(location.state?.from ?? homeFor(staff.department), { replace: true });
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
   };
 
   return (
@@ -65,12 +83,12 @@ export default function StaffLogin() {
           <form onSubmit={submit} className="flex flex-col gap-lg">
             <label className="flex flex-col gap-xs">
               <span className="font-label text-label-md">Staff ID or Email</span>
-              <input type="text" required placeholder="e.g., HK-04 or staff@apphotel.vn" autoComplete="username" className="input" />
+              <input type="text" required value={login} onChange={(e) => setLogin(e.target.value)} placeholder="e.g., HK-04 or staff@apphotel.vn" autoComplete="username" className="input" />
             </label>
             <label className="flex flex-col gap-xs">
               <span className="font-label text-label-md">Password</span>
               <div className="relative flex items-center">
-                <input type={showPwd ? 'text' : 'password'} required placeholder="Enter your shift password" autoComplete="current-password" className="input !pr-3xl" />
+                <input type={showPwd ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your shift password" autoComplete="current-password" className="input !pr-3xl" />
                 <button
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
@@ -81,7 +99,15 @@ export default function StaffLogin() {
                 </button>
               </div>
             </label>
-            <button type="submit" className="btn-primary w-full px-xl py-lg">Sign In to Shift</button>
+            {(error || expired) && (
+              <p role="alert" className="flex items-start gap-xs text-body-sm text-error">
+                <Icon name="error" className="text-title-sm shrink-0 mt-[1px]" />
+                {error || 'Your shift session ended. Please sign in again.'}
+              </p>
+            )}
+            <button type="submit" disabled={busy} className="btn-primary w-full px-xl py-lg">
+              {busy ? 'Signing in…' : 'Sign In to Shift'}
+            </button>
           </form>
         </section>
       </main>
