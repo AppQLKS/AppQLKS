@@ -22,6 +22,19 @@
   display: none;
 }
 
+/* Vùng an toàn (tai thỏ, thanh trạng thái, thanh điều hướng) khi chạy trong app Android/iOS.
+   Trên trình duyệt thường các giá trị env() = 0 nên không ảnh hưởng. */
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.sticky.top-0 {
+  top: env(safe-area-inset-top, 0px);
+}
+/* Thanh cố định ở đáy (tab bar, giỏ hàng, ô chat) đều nền trắng: kéo dài nền xuống dưới thanh điều hướng */
+.fixed.bottom-0 {
+  border-bottom: env(safe-area-inset-bottom, 0px) solid #ffffff;
+}
+
 .icon-filled {
   font-variation-settings: 'FILL' 1;
 }

@@ -9,15 +9,17 @@ const clean = (s) => String(s ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase().sl
 export default function Login() {
   const [params] = useSearchParams();
   const qrCode = clean(params.get('code')); // QR in trên thẻ phòng mở link /?code=A8K92P
-  const [chars, setChars] = useState(() => Array.from({ length: LENGTH }, (_, i) => qrCode[i] ?? ''));
+  // Một ô nhập duy nhất giữ cả mã; 6 ô vuông chỉ để hiển thị.
+  // (Nhiều ô nhập + chuyển focus làm rơi ký tự khi gõ nhanh / bàn phím Android.)
+  const [code, setCode] = useState(qrCode);
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showQrHint, setShowQrHint] = useState(false);
-  const inputs = useRef([]);
+  const inputRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { session, login, expired } = useAuth();
-  const code = chars.join('');
 
   const signIn = async (value) => {
     setBusy(true);
@@ -35,29 +37,9 @@ export default function Login() {
     if (qrCode.length === LENGTH && !session) signIn(qrCode);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setChar = (i, raw) => {
-    let typed = raw.replace(/[^a-z0-9]/gi, '').toUpperCase();
-    // Ô đang có 1 ký tự và người dùng gõ thêm -> giữ ký tự mới
-    if (typed.length === 2 && typed[0] === chars[i]) typed = typed[1];
+  const onChange = (e) => {
+    setCode(clean(e.target.value)); // gõ, dán, tự điền đều đi qua đây; bỏ dấu "-" và ký tự lạ
     setError('');
-    if (typed.length <= 1) {
-      setChars((prev) => prev.map((c, idx) => (idx === i ? typed : c)));
-      if (typed && i < LENGTH - 1) inputs.current[i + 1]?.focus();
-      return;
-    }
-    // Nhiều ký tự vào 1 ô cùng lúc (bàn phím tự điền mã, gõ nhanh) -> rải sang các ô sau
-    const spread = typed.slice(0, LENGTH - i);
-    setChars((prev) => prev.map((c, idx) => (idx >= i && idx < i + spread.length ? spread[idx - i] : c)));
-    inputs.current[Math.min(i + spread.length, LENGTH - 1)]?.focus();
-  };
-
-  const onPaste = (e) => {
-    const pasted = clean(e.clipboardData.getData('text'));
-    if (!pasted) return;
-    e.preventDefault();
-    setChars(Array.from({ length: LENGTH }, (_, i) => pasted[i] ?? ''));
-    setError('');
-    inputs.current[Math.min(pasted.length, LENGTH - 1)]?.focus();
   };
 
   const submit = (e) => {
@@ -67,26 +49,26 @@ export default function Login() {
 
   if (session?.token && !busy) return <Navigate to="/home" replace />;
 
-  const box = (i) => (
-    <input
-      key={i}
-      id={`code-${i}`}
-      ref={(el) => (inputs.current[i] = el)}
-      value={chars[i]}
-      onChange={(e) => setChar(i, e.target.value)}
-      onKeyDown={(e) => e.key === 'Backspace' && !chars[i] && i > 0 && inputs.current[i - 1]?.focus()}
-      onPaste={onPaste}
-      maxLength={LENGTH}
-      autoCapitalize="characters"
-      autoComplete="one-time-code"
-      aria-label={`Code character ${i + 1}`}
-      aria-invalid={!!error}
-      disabled={busy}
-      className={`w-11 h-14 text-center font-mono text-mono-lg uppercase rounded-md bg-surface-container-low border text-on-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary ${
-        error ? 'border-error' : 'border-outline-variant'
-      }`}
-    />
-  );
+  // Ô đang chờ nhập (để tô viền như con trỏ)
+  const activeIndex = Math.min(code.length, LENGTH - 1);
+  const box = (i) => {
+    const active = focused && i === activeIndex;
+    return (
+      <span
+        key={i}
+        aria-hidden="true"
+        className={`w-11 h-14 flex items-center justify-center font-mono text-mono-lg rounded-md border transition-colors duration-state-change ${
+          error
+            ? 'border-error bg-surface-container-low'
+            : active
+              ? 'border-primary ring-1 ring-primary bg-surface-container-lowest'
+              : 'border-outline-variant bg-surface-container-low'
+        }`}
+      >
+        {code[i] ?? (active ? <span className="w-px h-6 bg-on-surface animate-pulse" /> : '')}
+      </span>
+    );
+  };
 
   return (
     <div className="min-h-screen max-w-[390px] mx-auto px-page-margin py-3xl flex flex-col justify-between">
@@ -105,13 +87,34 @@ export default function Login() {
         <form onSubmit={submit} className="card !border-outline-variant/70 p-2xl flex flex-col gap-xl">
           <div className="flex flex-col gap-sm">
             <div className="flex items-center justify-between">
-              <label htmlFor="code-0" className="font-label text-label-md">Dynamic Room Code</label>
+              <label htmlFor="room-code" className="font-label text-label-md">Dynamic Room Code</label>
               <span className="font-mono text-mono-sm text-secondary">Example: A8K-92P</span>
             </div>
-            <div className="flex items-center justify-between gap-xs pt-xs" role="group" aria-label="6-character room access code">
-              {[0, 1, 2].map(box)}
-              <span className="font-mono text-mono-lg text-secondary px-xs select-none" aria-hidden="true">-</span>
-              {[3, 4, 5].map(box)}
+            {/* Ô nhập thật phủ trong suốt lên 6 ô hiển thị: chạm vào đâu cũng mở bàn phím */}
+            <div className="relative pt-xs">
+              <div className="flex items-center justify-between gap-xs">
+                {[0, 1, 2].map(box)}
+                <span className="font-mono text-mono-lg text-secondary px-xs select-none" aria-hidden="true">-</span>
+                {[3, 4, 5].map(box)}
+              </div>
+              <input
+                id="room-code"
+                ref={inputRef}
+                value={code}
+                onChange={onChange}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                maxLength={LENGTH + 1}
+                autoCapitalize="characters"
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                spellCheck={false}
+                inputMode="text"
+                aria-label="6-character room access code"
+                aria-invalid={!!error}
+                disabled={busy}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-text caret-transparent"
+              />
             </div>
             {(error || expired) && (
               <p role="alert" className="flex items-start gap-xs text-body-sm text-error pt-xs">
