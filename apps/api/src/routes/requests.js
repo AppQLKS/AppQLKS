@@ -21,8 +21,7 @@ router.get('/:id', (req, res) => {
   res.json(presentRequest(found));
 });
 
-// TODO(feature/room-service-dining, feature/housekeeping): tạo yêu cầu
-router.post('/', notImplemented('feature/room-service-dining | feature/housekeeping'));
+// Khách tạo yêu cầu qua POST /api/me/requests (gắn với phòng đang đăng nhập).
 // TODO(feature/staff-web-portal): nhận (claim) task
 router.post('/:id/claim', notImplemented('feature/staff-web-portal'));
 // TODO(feature/request-tracking): cập nhật trạng thái

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { db, findRoom, folioForRoom, presentRequest } from '../data/store.js';
 import { requireGuest } from '../middleware/requireGuest.js';
+import { HttpError } from '../middleware/errors.js';
+import { estimateMinutes, placeFoodOrder } from '../services/foodOrders.js';
 
 /** Thông tin phiên trả cho app khách — không bao giờ kèm mã cửa. */
 export function presentSession(stay) {
@@ -25,6 +27,17 @@ router.get('/requests', (req, res) => {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map(presentRequest);
   res.json(list);
+});
+
+// POST /api/me/requests { type: 'food', items: [{ menuId, qty }], note }
+router.post('/requests', (req, res) => {
+  const { type } = req.body ?? {};
+  if (type !== 'food') {
+    // TODO(feature/housekeeping): type 'housekeeping' | 'amenity'
+    throw new HttpError(400, `Unsupported request type: ${type}`);
+  }
+  const request = placeFoodOrder(req.stay.roomNumber, req.body);
+  res.status(201).json({ ...presentRequest(request), etaMinutes: estimateMinutes(request) });
 });
 
 // GET /api/me/folio -> hoá đơn dịch vụ phòng
