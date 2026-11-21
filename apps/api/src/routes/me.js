@@ -4,6 +4,8 @@ import { requireGuest } from '../middleware/requireGuest.js';
 import { HttpError } from '../middleware/errors.js';
 import { estimateMinutes, placeFoodOrder } from '../services/foodOrders.js';
 import { estimateHousekeepingMinutes, placeHousekeepingRequest } from '../services/housekeeping.js';
+import { resolveSession } from '../auth/guestSessions.js';
+import { streamRequests } from '../sse.js';
 
 /** Thông tin phiên trả cho app khách — không bao giờ kèm mã cửa. */
 export function presentSession(stay) {
@@ -20,6 +22,18 @@ router.use(requireGuest);
 
 // GET /api/me -> phiên hiện tại
 router.get('/', (req, res) => res.json(presentSession(req.stay)));
+
+// GET /api/me/events -> luồng realtime các thay đổi yêu cầu của phòng mình (Server-Sent Events).
+// Đóng luồng ngay khi phiên bị thu hồi (lễ tân đổi mã cửa / khách đăng xuất).
+router.get('/events', (req, res) => {
+  const { token, stay } = req;
+  streamRequests(
+    req,
+    res,
+    (r) => r.roomNumber === stay.roomNumber,
+    () => resolveSession(token) === stay,
+  );
+});
 
 // GET /api/me/requests -> yêu cầu của phòng mình
 router.get('/requests', (req, res) => {

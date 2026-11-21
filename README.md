@@ -42,7 +42,9 @@ Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:400
 | GET | `/api/me`, `/api/me/requests`, `/api/me/folio` | ✅ cần `Authorization: Bearer <token>` |
 | POST | `/api/me/requests` `{ type: "food", items: [{ menuId, qty }], note }` | ✅ đặt món (giá lấy từ thực đơn ở server) |
 | POST | `/api/me/requests` `{ type: "housekeeping", service: "clean_now"|"scheduled"|null, slot, amenities, note }` | ✅ dọn phòng / hẹn giờ / xin tiện nghi (chặn đặt dọn trùng) |
-| PATCH | `/api/requests/:id/status` | 🚧 501 – `feature/request-tracking` |
+| PATCH | `/api/requests/:id/status` `{ status: "completed"\|"pending"\|"cancelled", reason? }` | ✅ 🔒 hoàn thành / trả việc về hàng đợi / huỷ (lễ tân, quản lý; cần lý do) – ghi lịch sử |
+| GET | `/api/requests/events` | ✅ 🔒 luồng realtime (SSE) mọi thay đổi yêu cầu cho nhân viên |
+| GET | `/api/me/events` | ✅ luồng realtime (SSE) yêu cầu của phòng khách; tự đóng khi mã cửa bị đổi |
 | POST | `/api/chat` | 🚧 501 – `feature/ai-chatbot` |
 | * | `/api/checkout/:room/...` | 🚧 501 – `feature/express-checkout` |
 

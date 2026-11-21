@@ -13,12 +13,15 @@ export function AuthProvider({ children }) {
     setSession(next);
   }, []);
 
-  useEffect(() => {
-    setUnauthorizedHandler(() => {
-      update(null);
-      setExpired(true);
-    });
+  /** Phiên hết hiệu lực (lễ tân đổi mã cửa...) -> về trang nhập mã. */
+  const expire = useCallback(() => {
+    update(null);
+    setExpired(true);
   }, [update]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(expire);
+  }, [expire]);
 
   // Kiểm tra lại phiên khi mở app (mã có thể đã bị lễ tân đổi/thu hồi)
   useEffect(() => {
@@ -37,7 +40,7 @@ export function AuthProvider({ children }) {
     update(null);
   };
 
-  return <AuthContext.Provider value={{ session, login, logout, expired }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ session, login, logout, expired, expire }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);
