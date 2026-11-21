@@ -45,12 +45,24 @@ Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:400
 | PATCH | `/api/requests/:id/status` `{ status: "completed"\|"pending"\|"cancelled", reason? }` | ✅ 🔒 hoàn thành / trả việc về hàng đợi / huỷ (lễ tân, quản lý; cần lý do) – ghi lịch sử |
 | GET | `/api/requests/events` | ✅ 🔒 luồng realtime (SSE) mọi thay đổi yêu cầu cho nhân viên |
 | GET | `/api/me/events` | ✅ luồng realtime (SSE) yêu cầu của phòng khách; tự đóng khi mã cửa bị đổi |
-| POST | `/api/chat` | 🚧 501 – `feature/ai-chatbot` |
+| GET / POST / DELETE | `/api/chat` | ✅ chatbot AI concierge của khách: lịch sử / gửi tin nhắn / cuộc trò chuyện mới |
+| POST | `/api/chat/actions/:id/confirm`, `/dismiss` | ✅ khách xác nhận / bỏ thao tác do chatbot chuẩn bị |
+| GET | `/api/hotel-info` | ✅ kiến thức khách sạn chatbot dùng (trang AI Knowledge Base) |
 | GET / POST / DELETE | `/api/me/checkout` | ✅ khách xem tình trạng / xin trả phòng nhanh / huỷ yêu cầu |
 | GET | `/api/checkout` | ✅ 🔒 lễ tân/quản lý – các phòng chờ duyệt trả phòng (kèm hoá đơn) |
 | POST | `/api/checkout/:room/approve` | ✅ 🔒 lễ tân/quản lý – hoàn tất trả phòng: chốt hoá đơn, huỷ yêu cầu còn mở, thu hồi mã cửa, tạo việc dọn phòng |
 
 Chạy test API: `npm test -w apps/api`.
+
+## Chatbot AI concierge
+
+- Dùng Claude (`claude-opus-5-5`) qua Anthropic SDK, vòng lặp tool calling nằm ở [apps/api/src/chatbot](apps/api/src/chatbot).
+- Bật chatbot: tạo `apps/api/.env` từ `.env.example` và điền `ANTHROPIC_API_KEY=...` (lấy ở console.anthropic.com).
+  Không có key thì app vẫn chạy, màn Concierge hiện trạng thái Offline.
+- Tool: `get_hotel_info`, `get_menu`, `get_my_requests`, `get_folio` (đọc dữ liệu, chạy ngay) và `place_food_order`,
+  `request_housekeeping`, `request_checkout` (chỉ chuẩn bị thao tác – khách bấm **Confirm** trên thẻ mới thực hiện).
+- Kiến thức (giờ ăn sáng, dịch vụ, điểm tham quan) nằm trong [hotelInfo.js](apps/api/src/data/hotelInfo.js) – sửa cho đúng khách sạn thật.
+- Gọi API Claude có tính phí theo token; prompt cố định được cache để giảm chi phí.
 
 **Đăng nhập khách:** mã demo `A8K-92P` (phòng 305) hoặc `X7M-41Q` (phòng 204). QR trên thẻ phòng chỉ cần
 mở link `http://<host>:5174/?code=A8K92P` để tự đăng nhập.
