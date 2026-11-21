@@ -1,8 +1,15 @@
 import { Router } from 'express';
 import { db, departmentOf, presentRequest } from '../data/store.js';
-import { HttpError, notImplemented } from '../middleware/errors.js';
+import { HttpError } from '../middleware/errors.js';
+import { requireStaff } from '../middleware/requireStaff.js';
+import { claimRequest, updateRequestStatus } from '../services/requestStatus.js';
+import { streamRequests } from '../sse.js';
 
 const router = Router();
+
+// Hàng đợi yêu cầu chỉ dành cho nhân viên.
+// Khách tạo / xem yêu cầu của mình qua /api/me/requests.
+router.use(requireStaff());
 
 // GET /api/requests?department=kitchen|housekeeping&room=305
 router.get('/', (req, res) => {
@@ -15,15 +22,25 @@ router.get('/', (req, res) => {
   res.json(list);
 });
 
-router.get('/:id', (req, res) => {
-  const found = db.requests.find((r) => r.id === req.params.id);
-  if (!found) throw new HttpError(404, 'Request not found');
-  res.json(presentRequest(found));
+// GET /api/requests/events -> luồng realtime mọi thay đổi (Server-Sent Events)
+router.get('/events', (req, res) => streamRequests(req, res, () => true, undefined, { stayFilter: () => true }));
+
+router.get('/:id', (req, res) => res.json(presentRequest(findRequest(req.params.id))));
+
+// POST /api/requests/:id/claim -> khoá quyền xử lý cho nhân viên đang đăng nhập (người sau nhận 409)
+router.post('/:id/claim', (req, res) => {
+  res.json(presentRequest(claimRequest(findRequest(req.params.id), req.staff)));
 });
 
-// Khách tạo yêu cầu qua POST /api/me/requests (gắn với phòng đang đăng nhập).
-// TODO(feature/staff-web-portal): nhận (claim) task
-router.post('/:id/claim', notImplemented('feature/staff-web-portal'));
-// TODO(feature/request-tracking): cập nhật trạng thái
-router.patch('/:id/status', notImplemented('feature/request-tracking'));
+// PATCH /api/requests/:id/status { status: 'completed' | 'pending' | 'cancelled', reason? }
+router.patch('/:id/status', (req, res) => {
+  res.json(presentRequest(updateRequestStatus(findRequest(req.params.id), req.staff, req.body ?? {})));
+});
+
+function findRequest(id) {
+  const found = db.requests.find((r) => r.id === id);
+  if (!found) throw new HttpError(404, 'Request not found');
+  return found;
+}
+
 export default router;

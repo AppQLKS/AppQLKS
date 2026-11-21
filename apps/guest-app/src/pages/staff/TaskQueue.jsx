@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api.js';
+import { loadSession, staffApi } from '../../api.js';
+import { mergeRequest, subscribeRequests } from '../../live.js';
 import { BottomNav, Icon } from '../../components/ui.jsx';
-import { DEMO_STAFF, STAFF_NAV, elapsedMinutes, itemsText } from './staffNav.js';
+import { DEPARTMENT_LABEL, initialsOf, useStaffAuth } from '../../staffAuth.jsx';
+import { STAFF_NAV, elapsedMinutes, itemsText } from './staffNav.js';
+
+/** Giống quy tắc ở server. */
+const canHandle = (staff, task) =>
+  staff.department === 'manager' || staff.department === 'reception' || staff.department === task.department;
 
 const FILTERS = [
   { id: 'all', label: 'My Queue' },
@@ -12,36 +18,63 @@ const FILTERS = [
 ];
 
 export default function TaskQueue() {
+  const { staff, logout } = useStaffAuth();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('all');
   const [onShift, setOnShift] = useState(true);
-  const [claimed, setClaimed] = useState([]); // id đã claim (tạm thời ở client)
+  const [claiming, setClaiming] = useState(null);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    api('/requests').then(setTasks).catch(() => {});
+  const load = useCallback(() => {
+    staffApi('/requests').then(setTasks).catch((e) => setError(e.message));
   }, []);
+  useEffect(load, [load]);
 
+  // Việc mới / thay đổi trạng thái đến ngay, không cần tải lại
+  useEffect(
+    () =>
+      subscribeRequests('/requests/events', {
+        token: loadSession('staff')?.token,
+        onRequest: (r) => setTasks((list) => mergeRequest(list, r)),
+        onUnauthorized: logout,
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  // "My Queue": việc đang chờ mà mình được nhận + việc mình đang làm
+  const mine = (t) => t.status !== 'completed' && ((t.status === 'pending' && canHandle(staff, t)) || t.assignedTo === staff.id);
   const matches = (t) =>
-    filter === 'all' ? t.status !== 'completed' : filter === 'completed' ? t.status === 'completed' : t.department === filter && t.status !== 'completed';
+    filter === 'all' ? mine(t) : filter === 'completed' ? t.status === 'completed' : t.department === filter && t.status !== 'completed';
 
-  const visible = useMemo(() => tasks.filter(matches), [tasks, filter]); // eslint-disable-line react-hooks/exhaustive-deps
-  const incoming = visible.filter((t) => t.status === 'pending' && !claimed.includes(t.id));
-  const active = visible.filter((t) => t.status !== 'pending' || claimed.includes(t.id));
-  const openCount = tasks.filter((t) => t.status !== 'completed').length;
+  const visible = useMemo(() => tasks.filter(matches), [tasks, filter, staff]); // eslint-disable-line react-hooks/exhaustive-deps
+  const incoming = visible.filter((t) => t.status === 'pending');
+  const active = visible.filter((t) => t.status !== 'pending');
+  const myCount = tasks.filter(mine).length;
 
-  // TODO(feature/staff-web-portal): POST /api/requests/:id/claim
-  const claim = (id) => setClaimed((c) => [...c, id]);
+  const claim = async (id) => {
+    setClaiming(id);
+    setError('');
+    try {
+      const updated = await staffApi(`/requests/${id}/claim`, { method: 'POST' });
+      setTasks((list) => list.map((t) => (t.id === id ? updated : t)));
+    } catch (e) {
+      setError(`#${id}: ${e.message}`);
+      if (e.status === 409) load(); // người khác nhận trước -> tải lại
+    } finally {
+      setClaiming(null);
+    }
+  };
 
   return (
     <div className="min-h-screen max-w-[390px] mx-auto flex flex-col pb-24">
       <header className="px-page-margin pt-2xl pb-md flex items-center justify-between gap-sm">
         <div className="flex items-center gap-sm min-w-0">
           <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0 border border-accent/60 font-label text-label-md">
-            {DEMO_STAFF.initials}
+            {initialsOf(staff.name)}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-title text-title-sm truncate">{DEMO_STAFF.name}</span>
-            <span className="text-body-sm text-on-surface-variant truncate">{DEMO_STAFF.department}</span>
+            <span className="font-title text-title-sm truncate">{staff.name}</span>
+            <span className="text-body-sm text-on-surface-variant truncate">{DEPARTMENT_LABEL[staff.department]}</span>
           </div>
         </div>
         <div className="flex items-center gap-sm shrink-0">
@@ -71,10 +104,17 @@ export default function TaskQueue() {
         <div className="flex items-center gap-sm overflow-x-auto pb-xs" role="tablist" aria-label="Task filters">
           {FILTERS.map((f) => (
             <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => setFilter(f.id)} className={`pill ${filter === f.id ? 'pill-active' : 'pill-idle'}`}>
-              {f.id === 'all' ? `${f.label} (${openCount})` : f.label}
+              {f.id === 'all' ? `${f.label} (${myCount})` : f.label}
             </button>
           ))}
         </div>
+
+        {error && (
+          <p role="alert" className="flex items-start gap-xs p-md rounded-md bg-error-container text-error text-body-sm">
+            <Icon name="error" className="text-title-sm shrink-0 mt-[1px]" />
+            {error}
+          </p>
+        )}
 
         {incoming.map((t) => (
           <article key={t.id} className="card !border-2 !border-accent p-lg flex flex-col gap-md">
@@ -94,7 +134,13 @@ export default function TaskQueue() {
                 </div>
               )}
             </div>
-            <button type="button" onClick={() => claim(t.id)} className="btn-primary w-full px-xl py-md">Claim Task</button>
+            {canHandle(staff, t) ? (
+              <button type="button" onClick={() => claim(t.id)} disabled={claiming === t.id} className="btn-primary w-full px-xl py-md">
+                {claiming === t.id ? 'Claiming…' : 'Claim Task'}
+              </button>
+            ) : (
+              <p className="text-center text-body-sm text-on-surface-variant">For {DEPARTMENT_LABEL[t.department]} staff</p>
+            )}
           </article>
         ))}
 
@@ -104,7 +150,7 @@ export default function TaskQueue() {
             <span className="text-body-sm text-on-surface-variant tabular-nums">{active.length} {filter === 'completed' ? 'done' : 'active'}</span>
           </div>
           {active.map((t) => {
-            const mine = claimed.includes(t.id) || t.assignedTo === DEMO_STAFF.id;
+            const mine = t.assignedTo === staff.id;
             return (
               <article key={t.id} className="card !border-outline-variant p-lg flex flex-col gap-md">
                 <header className="flex items-center justify-between gap-sm">

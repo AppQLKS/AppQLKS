@@ -20,8 +20,8 @@ function Kpi({ label, value, icon, tone, chip }) {
 export default function KpiRow({ rooms, requests }) {
   const occupied = rooms.filter((r) => r.status === 'occupied').length;
   const pct = rooms.length ? Math.round((occupied / rooms.length) * 100) : 0;
-  const food = requests.filter((r) => r.department === 'kitchen' && r.status !== 'completed').length;
-  const hk = requests.filter((r) => r.department === 'housekeeping' && r.status !== 'completed');
+  const food = requests.filter((r) => r.department === 'kitchen' && ['pending', 'in_progress'].includes(r.status)).length;
+  const hk = requests.filter((r) => r.department === 'housekeeping' && ['pending', 'in_progress'].includes(r.status));
   const hkActive = hk.filter((r) => r.status === 'in_progress').length;
 
   return (

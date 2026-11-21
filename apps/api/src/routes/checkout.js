@@ -1,9 +1,15 @@
 import { Router } from 'express';
-import { notImplemented } from '../middleware/errors.js';
+import { requireStaff } from '../middleware/requireStaff.js';
+import { completeCheckout, pendingCheckouts } from '../services/checkout.js';
 
+// Trả phòng phía lễ tân. Khách xin trả phòng qua /api/me/checkout.
 const router = Router();
-// TODO(feature/express-checkout): xem hoá đơn, yêu cầu & duyệt trả phòng nhanh, thu hồi mã phòng
-router.get('/:roomNumber/folio', notImplemented('feature/express-checkout'));
-router.post('/:roomNumber/request', notImplemented('feature/express-checkout'));
-router.post('/:roomNumber/approve', notImplemented('feature/express-checkout'));
+router.use(requireStaff('reception', 'manager'));
+
+// GET /api/checkout -> các phòng đang chờ duyệt trả phòng nhanh (kèm hoá đơn)
+router.get('/', (req, res) => res.json(pendingCheckouts()));
+
+// POST /api/checkout/:roomNumber/approve -> hoàn tất trả phòng, thu hồi mã cửa
+router.post('/:roomNumber/approve', (req, res) => res.json(completeCheckout(req.params.roomNumber, req.staff)));
+
 export default router;

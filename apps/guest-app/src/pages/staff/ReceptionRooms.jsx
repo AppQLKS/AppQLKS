@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { api } from '../../api.js';
+import { useCallback, useEffect, useState } from 'react';
+import { loadSession, staffApi } from '../../api.js';
 import { BottomNav, Icon, formatCode, money } from '../../components/ui.jsx';
+import { subscribeRequests } from '../../live.js';
+import { useStaffAuth } from '../../staffAuth.jsx';
 import { STAFF_NAV } from './staffNav.js';
 
 const TILE = {
@@ -10,30 +12,83 @@ const TILE = {
 };
 
 export default function ReceptionRooms() {
+  const { staff, logout } = useStaffAuth();
+  const isFrontDesk = ['reception', 'manager'].includes(staff.department);
   const [rooms, setRooms] = useState([]);
-  const [selected, setSelected] = useState('305');
+  const [checkouts, setCheckouts] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [revoked, setRevoked] = useState(false);
-  const [bannerFolio, setBannerFolio] = useState(null);
+  const [busy, setBusy] = useState(null); // 'revoke' | 'checkout:<room>'
+  const [message, setMessage] = useState(null); // { tone, text }
+  const [version, setVersion] = useState(0);
+
+  const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
-    api('/rooms').then(setRooms).catch(() => {});
-    api('/rooms/305').then((r) => setBannerFolio(r.folio)).catch(() => {});
-  }, []);
+    staffApi('/rooms').then(setRooms).catch(() => {});
+    if (isFrontDesk) staffApi('/checkout').then(setCheckouts).catch(() => {});
+  }, [version, isFrontDesk]);
+
+  // Chọn sẵn phòng đầu tiên đang chờ trả phòng (hoặc phòng có khách đầu tiên)
+  useEffect(() => {
+    if (selected || rooms.length === 0) return;
+    setSelected(checkouts[0]?.roomNumber ?? rooms.find((r) => r.status === 'occupied')?.number ?? rooms[0].number);
+  }, [rooms, checkouts, selected]);
 
   useEffect(() => {
-    setRevoked(false);
-    api(`/rooms/${selected}`).then(setDetail).catch(() => setDetail(null));
-  }, [selected]);
+    if (!selected) return;
+    staffApi(`/rooms/${selected}`).then(setDetail).catch(() => setDetail(null));
+  }, [selected, version]);
+
+  // Realtime: khách xin / huỷ trả phòng, yêu cầu mới (ảnh hưởng hoá đơn)
+  useEffect(
+    () =>
+      subscribeRequests('/requests/events', {
+        token: loadSession('staff')?.token,
+        onRequest: reload,
+        onStay: reload,
+        onUnauthorized: logout,
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const occupied = rooms.filter((r) => r.status === 'occupied').length;
-  const code = detail?.stay ? formatCode(detail.stay.accessCode) : '—';
+  const code = detail?.stay?.accessCode ? formatCode(detail.stay.accessCode) : null;
 
   const copy = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const run = async (key, fn, success) => {
+    setBusy(key);
+    setMessage(null);
+    try {
+      await fn();
+      setMessage({ tone: 'ok', text: success });
+      reload();
+    } catch (e) {
+      setMessage({ tone: 'error', text: e.message });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // "Revoke" = sinh mã mới: mã cũ và mọi điện thoại đang đăng nhập bằng mã cũ mất hiệu lực
+  const revoke = () => {
+    if (!window.confirm(`Revoke the door code for Room ${selected}? Guests will need the new code to sign in again.`)) return;
+    run('revoke', () => staffApi(`/rooms/${selected}/code`, { method: 'POST' }), `Room ${selected}: new door code issued.`);
+  };
+
+  const checkOut = (roomNumber, guestName, total) => {
+    if (!window.confirm(`Check out Room ${roomNumber} (${guestName}) and deactivate the door code?\nBalance: ${money(total)}`)) return;
+    run(
+      `checkout:${roomNumber}`,
+      () => staffApi(`/checkout/${roomNumber}/approve`, { method: 'POST' }),
+      `Room ${roomNumber} checked out. Turnover cleaning sent to housekeeping.`,
+    );
   };
 
   return (
@@ -43,31 +98,45 @@ export default function ReceptionRooms() {
           <h1 className="font-headline text-headline-lg">Reception Desk</h1>
           <p className="text-body-sm text-on-surface-variant tabular-nums">Boutique Hotel • {occupied}/{rooms.length} Occupied</p>
         </div>
-        <button type="button" className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-primary text-on-primary font-label text-label-md hover:opacity-95 transition duration-state-change shrink-0">
+        {/* TODO(sau MVP): nhận phòng mới (check-in) và sinh mã cửa */}
+        <button type="button" disabled title="Coming soon" className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-primary text-on-primary font-label text-label-md opacity-50 shrink-0">
           <Icon name="add" className="text-title-md" />
           Check-in
         </button>
       </header>
 
       <main className="px-page-margin flex flex-col gap-lg flex-1">
-        {/* TODO(feature/express-checkout): hiển thị yêu cầu trả phòng thật từ API */}
-        <article className="bg-secondary-container rounded-lg p-lg shadow-sm border border-accent flex flex-col gap-md">
-          <div className="flex items-start gap-sm">
-            <Icon name="notifications_active" className="text-title-lg text-secondary shrink-0" />
-            <div className="flex flex-col gap-xs">
-              <span className="font-label text-label-sm text-on-secondary-container uppercase tracking-wider">Express Checkout Request • Room 305</span>
-              <p className="font-title text-title-sm text-on-secondary-container tabular-nums">Total Room Service Bill: {bannerFolio ? money(bannerFolio.total) : '—'}</p>
+        {message && (
+          <p role="status" className={`flex items-start gap-xs p-md rounded-md text-body-sm ${message.tone === 'ok' ? 'bg-success-container text-on-success-container' : 'bg-error-container text-error'}`}>
+            <Icon name={message.tone === 'ok' ? 'check_circle' : 'error'} className="text-title-sm shrink-0 mt-[1px]" />
+            {message.text}
+          </p>
+        )}
+
+        {checkouts.map((c) => (
+          <article key={c.roomNumber} className="bg-secondary-container rounded-lg p-lg shadow-sm border border-accent flex flex-col gap-md">
+            <div className="flex items-start gap-sm">
+              <Icon name="notifications_active" className="text-title-lg text-secondary shrink-0" />
+              <div className="flex flex-col gap-xs">
+                <span className="font-label text-label-sm text-on-secondary-container uppercase tracking-wider">Express Checkout Request • Room {c.roomNumber}</span>
+                <p className="font-title text-title-sm text-on-secondary-container tabular-nums">Total Room Service Bill: {money(c.folio.total)}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-sm">
-            <button type="button" onClick={() => setSelected('305')} className="px-md py-sm rounded-md bg-surface-container-lowest border border-outline-variant font-label text-label-sm hover:bg-surface-container-low transition-colors duration-state-change">
-              Review Bill
-            </button>
-            <button type="button" className="flex-1 px-md py-sm rounded-md bg-primary text-on-primary font-label text-label-sm hover:opacity-95 transition duration-state-change">
-              Approve &amp; Revoke Code
-            </button>
-          </div>
-        </article>
+            <div className="flex items-center gap-sm">
+              <button type="button" onClick={() => setSelected(c.roomNumber)} className="px-md py-sm rounded-md bg-surface-container-lowest border border-outline-variant font-label text-label-sm hover:bg-surface-container-low transition-colors duration-state-change">
+                Review Bill
+              </button>
+              <button
+                type="button"
+                onClick={() => checkOut(c.roomNumber, c.guestName, c.folio.total)}
+                disabled={!!busy}
+                className="flex-1 px-md py-sm rounded-md bg-primary text-on-primary font-label text-label-sm hover:opacity-95 disabled:opacity-60 transition duration-state-change"
+              >
+                {busy === `checkout:${c.roomNumber}` ? 'Checking out…' : 'Approve & Revoke Code'}
+              </button>
+            </div>
+          </article>
+        ))}
 
         <section aria-labelledby="room-grid-heading" className="flex flex-col gap-sm">
           <div className="flex items-center justify-between">
@@ -89,7 +158,7 @@ export default function ReceptionRooms() {
                   }`}
                 >
                   <span className={`font-mono text-mono-sm ${isSel ? 'text-primary font-semibold' : t.num}`}>Room {r.number}</span>
-                  <span className={`font-label text-label-sm ${isSel ? 'text-secondary' : t.label}`}>{r.checkoutRequested ? 'Checkout Pending' : t.text}</span>
+                  <span className={`font-label text-label-sm ${isSel || r.checkoutRequested ? 'text-secondary' : t.label}`}>{r.checkoutRequested ? 'Checkout Pending' : t.text}</span>
                 </button>
               );
             })}
@@ -104,18 +173,20 @@ export default function ReceptionRooms() {
               </h2>
               {detail.stay ? (
                 <>
-                  <div className="flex items-center justify-between gap-sm p-md rounded-md bg-surface-container-low border border-outline-variant/80">
-                    <div className="flex items-center gap-sm">
-                      <span className={`font-mono text-mono-lg tracking-wider ${revoked ? 'line-through text-on-surface-variant' : ''}`}>{code}</span>
-                      <button type="button" onClick={copy} aria-label={`Copy room code ${code}`} className="inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-colors duration-state-change">
-                        <Icon name={copied ? 'check' : 'content_copy'} className="text-title-md" />
+                  <p className="text-body-sm text-on-surface-variant -mt-sm">{detail.stay.guestName}</p>
+                  {isFrontDesk && code && (
+                    <div className="flex items-center justify-between gap-sm p-md rounded-md bg-surface-container-low border border-outline-variant/80">
+                      <div className="flex items-center gap-sm">
+                        <span className="font-mono text-mono-lg tracking-wider">{code}</span>
+                        <button type="button" onClick={copy} aria-label={`Copy room code ${code}`} className="inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-colors duration-state-change">
+                          <Icon name={copied ? 'check' : 'content_copy'} className="text-title-md" />
+                        </button>
+                      </div>
+                      <button type="button" disabled={!!busy} onClick={revoke} className="px-md py-xs rounded-md border border-error text-error font-label text-label-sm hover:bg-error-container/40 disabled:opacity-60 transition-colors duration-state-change">
+                        {busy === 'revoke' ? 'Revoking…' : 'Revoke Code'}
                       </button>
                     </div>
-                    {/* TODO(feature/express-checkout): thu hồi mã qua API */}
-                    <button type="button" disabled={revoked} onClick={() => setRevoked(true)} className="px-md py-xs rounded-md border border-error text-error font-label text-label-sm hover:bg-error-container/40 disabled:opacity-60 transition-colors duration-state-change">
-                      {revoked ? 'Revoked' : 'Revoke Code'}
-                    </button>
-                  </div>
+                  )}
                   <div className="flex items-center justify-between gap-md pt-xs border-t border-outline-variant/60">
                     <div className="flex flex-col">
                       <span className="text-body-sm text-on-surface-variant">Room Service</span>
@@ -123,7 +194,16 @@ export default function ReceptionRooms() {
                         {detail.folio.lines.length} Items • {money(detail.folio.total)}
                       </span>
                     </div>
-                    <button type="button" className="btn-primary px-lg py-md !text-label-md">Complete Check-out</button>
+                    {isFrontDesk && (
+                      <button
+                        type="button"
+                        disabled={!!busy}
+                        onClick={() => checkOut(detail.number, detail.stay.guestName, detail.folio.total)}
+                        className="btn-primary px-lg py-md !text-label-md"
+                      >
+                        {busy === `checkout:${detail.number}` ? 'Checking out…' : 'Complete Check-out'}
+                      </button>
+                    )}
                   </div>
                 </>
               ) : (

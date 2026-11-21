@@ -6,11 +6,14 @@ import Home from './pages/guest/Home.jsx';
 import Dining from './pages/guest/Dining.jsx';
 import Housekeeping from './pages/guest/Housekeeping.jsx';
 import Concierge from './pages/guest/Concierge.jsx';
+import Checkout from './pages/guest/Checkout.jsx';
+import Goodbye from './pages/guest/Goodbye.jsx';
 import StaffLogin from './pages/staff/StaffLogin.jsx';
 import TaskQueue from './pages/staff/TaskQueue.jsx';
 import TaskDetail from './pages/staff/TaskDetail.jsx';
 import ReceptionRooms from './pages/staff/ReceptionRooms.jsx';
-import { STAFF_NAV } from './pages/staff/staffNav.js';
+import ShiftProfile from './pages/staff/ShiftProfile.jsx';
+import { RequireStaff } from './staffAuth.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 const GUEST_NAV = [
@@ -29,13 +32,15 @@ export default function App() {
       <Route path="/dining" element={<RequireGuest><Dining /></RequireGuest>} />
       <Route path="/housekeeping" element={<RequireGuest><Housekeeping /></RequireGuest>} />
       <Route path="/concierge" element={<RequireGuest><Concierge /></RequireGuest>} />
+      <Route path="/checkout" element={<RequireGuest><Checkout /></RequireGuest>} />
+      <Route path="/goodbye" element={<Goodbye />} />
 
       {/* Nhân viên (mobile) */}
       <Route path="/staff/login" element={<StaffLogin />} />
-      <Route path="/staff/tasks" element={<TaskQueue />} />
-      <Route path="/staff/tasks/:id" element={<TaskDetail />} />
-      <Route path="/staff/rooms" element={<ReceptionRooms />} />
-      <Route path="/staff/profile" element={<Placeholder title="Shift Profile" branch="feature/staff-web-portal" nav={STAFF_NAV} />} />
+      <Route path="/staff/tasks" element={<RequireStaff><TaskQueue /></RequireStaff>} />
+      <Route path="/staff/tasks/:id" element={<RequireStaff><TaskDetail /></RequireStaff>} />
+      <Route path="/staff/rooms" element={<RequireStaff><ReceptionRooms /></RequireStaff>} />
+      <Route path="/staff/profile" element={<RequireStaff><ShiftProfile /></RequireStaff>} />
 
       <Route path="*" element={<Placeholder title="Page not found" />} />
     </Routes>

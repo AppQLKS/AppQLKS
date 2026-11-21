@@ -1,6 +1,11 @@
 import { useState } from 'react';
+import { api } from '../api.js';
 import { useStaff } from '../staff.jsx';
 import { Icon, StatusBadge, elapsedLabel, initials } from './ui.jsx';
+
+/** Giống quy tắc ở server: bếp chỉ nhận việc bếp, buồng phòng nhận việc buồng phòng. */
+const canClaim = (staff, task) =>
+  staff.department === 'manager' || staff.department === 'reception' || staff.department === task.department;
 
 const TABS = [
   { id: 'all', label: 'All Departments' },
@@ -10,16 +15,27 @@ const TABS = [
 
 const itemsText = (items) => items.map((i) => (i.qty > 1 ? `${i.qty}x ${i.name}` : i.name)).join(' & ');
 
-export default function TaskQueueTable({ requests, setRequests, initialDept = 'all' }) {
+export default function TaskQueueTable({ requests, setRequests, reload, initialDept = 'all' }) {
   const { staff } = useStaff();
   const [dept, setDept] = useState(initialDept);
+  const [claiming, setClaiming] = useState(null);
+  const [error, setError] = useState('');
   const rows = requests.filter((r) => dept === 'all' || r.department === dept);
 
-  // TODO(feature/staff-web-portal): POST /api/requests/:id/claim (khoá ở server để tránh 2 người nhận cùng lúc)
-  const claim = (id) =>
-    setRequests((list) =>
-      list.map((r) => (r.id === id && r.status === 'pending' ? { ...r, status: 'in_progress', assignedTo: staff.id, assignee: { id: staff.id, name: staff.name } } : r)),
-    );
+  // Server khoá việc: nếu người khác đã nhận trước, trả 409 và ta tải lại hàng đợi
+  const claim = async (id) => {
+    setClaiming(id);
+    setError('');
+    try {
+      const updated = await api(`/requests/${id}/claim`, { method: 'POST' });
+      setRequests((list) => list.map((r) => (r.id === id ? updated : r)));
+    } catch (e) {
+      setError(`#${id}: ${e.message}`);
+      if (e.status === 409) reload?.();
+    } finally {
+      setClaiming(null);
+    }
+  };
 
   return (
     <section aria-label="Live Multi-Department Task Queue" className="panel flex flex-col">
@@ -45,6 +61,12 @@ export default function TaskQueueTable({ requests, setRequests, initialDept = 'a
         </div>
       </div>
 
+      {error && (
+        <p role="alert" className="mx-gutter-xl mt-gutter-md flex items-center gap-2 p-gutter-md rounded bg-error-tint text-on-error-tint text-body-sm">
+          <Icon name="error" className="text-[18px] shrink-0" />
+          {error}
+        </p>
+      )}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -82,9 +104,15 @@ export default function TaskQueueTable({ requests, setRequests, initialDept = 'a
                 <td className="py-3.5 px-4 whitespace-nowrap"><StatusBadge status={t.status} /></td>
                 <td className="py-3.5 px-4 text-right">
                   {t.status === 'pending' ? (
-                    <button type="button" onClick={() => claim(t.id)} className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-primary text-on-primary hover:bg-on-blue-tint transition-colors duration-state-change whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => claim(t.id)}
+                      disabled={claiming === t.id || !canClaim(staff, t)}
+                      title={canClaim(staff, t) ? undefined : `Only ${t.department} staff can claim this`}
+                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-primary text-on-primary hover:bg-on-blue-tint disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-state-change whitespace-nowrap"
+                    >
                       <Icon name="lock" className="text-[15px]" />
-                      <span className="text-label-lg">Claim Task</span>
+                      <span className="text-label-lg">{claiming === t.id ? 'Claiming…' : 'Claim Task'}</span>
                     </button>
                   ) : (
                     <button type="button" disabled className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-surface-container text-on-surface-variant border border-outline-variant cursor-not-allowed whitespace-nowrap">

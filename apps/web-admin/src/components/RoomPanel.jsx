@@ -13,7 +13,7 @@ function RoomTile({ room, selected, onSelect }) {
       ? 'bg-amber-tint/60 border-status-amber/50 cursor-default'
       : 'bg-surface-container border-outline-variant cursor-default';
   const dot = occupied ? 'bg-status-emerald' : room.status === 'cleaning' ? 'bg-status-amber' : 'bg-outline';
-  const text = occupied ? room.guestName : room.status === 'cleaning' ? 'Needs Cleaning' : 'Vacant';
+  const text = occupied ? (room.checkoutRequested ? 'Checkout Pending' : room.guestName) : room.status === 'cleaning' ? 'Needs Cleaning' : 'Vacant';
 
   return (
     <button type="button" aria-disabled={!occupied} aria-pressed={selected} onClick={() => occupied && onSelect(room.number)} className={`${base} ${look}`}>
@@ -26,26 +26,45 @@ function RoomTile({ room, selected, onSelect }) {
   );
 }
 
-function RoomDrawer({ number, onClose }) {
+function RoomDrawer({ number, refreshKey, canCheckout, onClose, onCheckedOut }) {
   const [detail, setDetail] = useState(null);
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
-  const [approved, setApproved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
   const [regenError, setRegenError] = useState('');
 
+  // Tải lại khi đổi phòng hoặc khi danh sách phòng được làm mới (realtime)
   useEffect(() => {
-    setRegenError('');
-    setApproved(false);
     api(`/rooms/${number}`)
       .then((d) => {
         setDetail(d);
         setCode(d.stay?.accessCode ?? '');
       })
       .catch(() => setDetail(null));
+  }, [number, refreshKey]);
+
+  useEffect(() => {
+    setRegenError('');
+    setCheckoutError('');
   }, [number]);
 
   if (!detail?.stay) return null;
   const { stay, folio } = detail;
+
+  const checkOut = async () => {
+    if (!window.confirm(`Check out Room ${number} (${stay.guestName}) and deactivate the door code?\nBalance: ${money(folio.total)}`)) return;
+    setBusy(true);
+    setCheckoutError('');
+    try {
+      await api(`/checkout/${number}/approve`, { method: 'POST' });
+      onCheckedOut();
+    } catch (e) {
+      setCheckoutError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const copy = () => {
     navigator.clipboard?.writeText(formatCode(code)).catch(() => {});
@@ -96,6 +115,12 @@ function RoomDrawer({ number, onClose }) {
           <span className="text-label-md text-on-surface-variant whitespace-nowrap">Dynamic Door Code</span>
           <span className="text-label-sm text-on-blue-tint bg-blue-tint px-2 py-0.5 rounded-full shrink-0">Active</span>
         </div>
+        {!code ? (
+          <p className="flex items-center gap-2 text-body-sm text-on-surface-variant">
+            <Icon name="lock" className="text-[16px]" />
+            Visible to reception and managers only.
+          </p>
+        ) : (
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-mono-code tabular-nums">{formatCode(code)}</span>
           <div className="flex items-center gap-1.5">
@@ -109,6 +134,7 @@ function RoomDrawer({ number, onClose }) {
             </button>
           </div>
         </div>
+        )}
         {regenError && <p className="text-body-sm text-on-error-tint">{regenError}</p>}
       </div>
 
@@ -138,22 +164,25 @@ function RoomDrawer({ number, onClose }) {
         </div>
       </div>
 
-      {/* TODO(feature/express-checkout): POST /api/checkout/:room/approve */}
-      <button
-        type="button"
-        disabled={approved}
-        onClick={() => setApproved(true)}
-        className={`w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded text-on-primary transition-colors duration-state-change ${approved ? 'bg-status-emerald' : 'bg-primary hover:bg-on-blue-tint'}`}
-      >
-        <Icon name="check_circle" className="text-[18px]" />
-        <span className="text-label-lg">{approved ? 'Express Checkout Approved' : 'Approve Express Checkout'}</span>
-      </button>
+      {checkoutError && <p role="alert" className="text-body-sm text-on-error-tint">{checkoutError}</p>}
+      {canCheckout && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={checkOut}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded text-on-primary bg-primary hover:bg-on-blue-tint disabled:opacity-60 transition-colors duration-state-change"
+        >
+          <Icon name="check_circle" className="text-[18px]" />
+          <span className="text-label-lg">
+            {busy ? 'Checking out…' : stay.checkoutRequested ? 'Approve Express Checkout' : 'Check Out Guest'}
+          </span>
+        </button>
+      )}
     </aside>
   );
 }
 
-export default function RoomPanel({ rooms }) {
-  const [selected, setSelected] = useState('204');
+export default function RoomPanel({ rooms, selected, onSelect: setSelected, canCheckout, onCheckedOut }) {
   const count = (s) => rooms.filter((r) => r.status === s).length;
 
   return (
@@ -176,7 +205,18 @@ export default function RoomPanel({ rooms }) {
           ))}
         </div>
       </div>
-      {selected && <RoomDrawer number={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <RoomDrawer
+          number={selected}
+          refreshKey={rooms}
+          canCheckout={canCheckout}
+          onClose={() => setSelected(null)}
+          onCheckedOut={() => {
+            setSelected(null);
+            onCheckedOut();
+          }}
+        />
+      )}
     </section>
   );
 }

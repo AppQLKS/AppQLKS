@@ -1,17 +1,16 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
+import { useRoomRequests } from '../../useRoomRequests.js';
 import { Badge, Icon, Logo, StepBar } from '../../components/ui.jsx';
 
 const services = [
   { to: '/dining', title: 'Room Service & Dining', sub: 'All-day in-suite menu', icon: 'room_service', tone: 'secondary' },
   { to: '/housekeeping', title: 'Housekeeping', sub: 'Cleaning & amenities', icon: 'cleaning_services', tone: 'primary' },
   { to: '/concierge', title: 'AI Concierge', sub: 'Local tips & quick orders', icon: 'auto_awesome', tone: 'secondary' },
-  { to: '/concierge#checkout', title: 'Express Checkout', sub: 'View charges & depart', icon: 'receipt_long', tone: 'primary' },
+  { to: '/checkout', title: 'Express Checkout', sub: 'View charges & depart', icon: 'receipt_long', tone: 'primary' },
 ];
 
-const STEP_OF = { pending: 0, in_progress: 2, completed: 3 };
+const STEP_OF = { pending: 0, in_progress: 2, completed: 4 }; // 4 = mọi bước đã xong
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -20,14 +19,11 @@ const greeting = () => {
 
 export default function Home() {
   const { session, logout } = useAuth();
-  const [active, setActive] = useState(null);
-
-  useEffect(() => {
-    // TODO(feature/request-tracking): cập nhật realtime
-    api('/me/requests')
-      .then((list) => setActive(list.find((r) => r.status !== 'completed' && r.status !== 'cancelled') ?? null))
-      .catch(() => {});
-  }, []);
+  const requests = useRoomRequests() ?? [];
+  // Ưu tiên yêu cầu đang mở; nếu không có thì hiện yêu cầu vừa xong (trong 10 phút) để khách thấy kết quả
+  const recentlyDone = (r) => r.status === 'completed' && Date.now() - new Date(r.completedAt).getTime() < 10 * 60_000;
+  const active =
+    requests.find((r) => r.status === 'pending' || r.status === 'in_progress') ?? requests.find(recentlyDone) ?? null;
 
   const { room, guest } = session;
   const firstName = guest.name.split(' ')[0];
@@ -95,7 +91,7 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <Badge tone="accent">{active.status === 'pending' ? 'Sent' : 'In Progress'}</Badge>
+                <Badge tone={active.status === 'completed' ? 'success' : 'accent'}>{{ pending: 'Sent', in_progress: 'In Progress', completed: 'Done' }[active.status]}</Badge>
               </header>
               <StepBar steps={['Sent', 'Assigned', 'On Way', 'Done']} current={STEP_OF[active.status] ?? 0} />
             </article>
