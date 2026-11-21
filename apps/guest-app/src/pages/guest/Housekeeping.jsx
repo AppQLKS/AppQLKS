@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
+import { useRoomRequests } from '../../useRoomRequests.js';
 import { BackButton, Badge, Icon } from '../../components/ui.jsx';
 
 const SLOTS = ['10:00', '13:00', '16:00', '19:00'];
@@ -19,11 +20,12 @@ const dayOf = (iso) => {
   return d.toDateString() === today.toDateString() ? 'Today' : 'Tomorrow';
 };
 
-/** Các bước theo dõi dựng từ trạng thái yêu cầu. */
+/** Các bước theo dõi dựng từ trạng thái + lịch sử của yêu cầu. */
 function stepsFor(req) {
   const done = req.status === 'completed';
-  const working = req.status === 'in_progress' || done;
+  const working = req.status === 'in_progress';
   const state = (reached, current) => (reached ? 'done' : current ? 'current' : 'todo');
+  const claimedAt = working || done ? req.claimedAt : null;
   return [
     {
       title: 'Request Sent',
@@ -32,18 +34,27 @@ function stepsFor(req) {
       state: 'done',
     },
     {
-      title: req.scheduledFor ? 'Scheduled' : 'Staff Assigned',
-      sub: req.assignee ? `${req.assignee.name} • Floor ${req.roomNumber[0]} Attendant` : req.scheduledFor ? `${dayOf(req.scheduledFor)} at ${timeOf(req.scheduledFor)}` : 'Waiting for an attendant',
-      time: '',
-      state: state(!!req.assignee, !req.assignee),
+      title: req.scheduledFor && !req.assignee ? 'Scheduled' : 'Staff Assigned',
+      sub: req.assignee
+        ? `${req.assignee.name} • Floor ${req.roomNumber[0]} Attendant`
+        : req.scheduledFor
+          ? `${dayOf(req.scheduledFor)} at ${timeOf(req.scheduledFor)}`
+          : 'Waiting for an attendant',
+      time: claimedAt ? timeOf(claimedAt) : '',
+      state: state(!!req.assignee || done, !req.assignee && !done),
     },
     {
       title: 'In Progress',
-      sub: working ? `Attendant is servicing Room ${req.roomNumber}` : 'Starts when the attendant arrives',
-      time: req.status === 'in_progress' ? 'Now' : '',
-      state: state(done, req.status === 'in_progress'),
+      sub: working || done ? `Attendant is servicing Room ${req.roomNumber}` : 'Starts when the attendant arrives',
+      time: working ? 'Now' : '',
+      state: state(done, working),
     },
-    { title: 'Completed', sub: done ? 'All done — enjoy your suite' : 'We will notify you', time: '', state: done ? 'done' : 'todo' },
+    {
+      title: 'Completed',
+      sub: done ? 'All done — enjoy your suite' : 'We will notify you',
+      time: done && req.completedAt ? timeOf(req.completedAt) : '',
+      state: done ? 'done' : 'todo',
+    },
   ];
 }
 
@@ -94,16 +105,9 @@ export default function Housekeeping() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(null);
-  const [latest, setLatest] = useState(null);
-
-  const loadLatest = useCallback(() => {
-    // TODO(feature/request-tracking): cập nhật realtime thay vì tải khi mở trang
-    api('/me/requests')
-      .then((list) => setLatest(list.find((r) => HK_TYPES.includes(r.type)) ?? null))
-      .catch(() => {});
-  }, []);
-
-  useEffect(loadLatest, [loadLatest]);
+  // Yêu cầu buồng phòng mới nhất, tự cập nhật realtime (bỏ qua yêu cầu đã huỷ)
+  const requests = useRoomRequests() ?? [];
+  const latest = requests.find((r) => HK_TYPES.includes(r.type) && r.status !== 'cancelled') ?? null;
 
   const cleaningOpen = latest?.type === 'housekeeping' && ['pending', 'in_progress'].includes(latest.status);
   const hasSelection = service || amenities.length > 0;
@@ -135,8 +139,7 @@ export default function Housekeeping() {
         method: 'POST',
         body: JSON.stringify({ type: 'housekeeping', service, slot, amenities, note }),
       });
-      setSent(req);
-      setLatest(req);
+      setSent(req); // danh sách tự cập nhật qua luồng realtime
       setService(null);
       setSlot(null);
       setAmenities([]);

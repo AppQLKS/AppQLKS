@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, loadSession } from '../api.js';
+import { mergeRequest, subscribeRequests } from '../live.js';
 import { useStaff } from '../staff.jsx';
 import { Icon, initials } from './ui.jsx';
 
@@ -22,7 +23,24 @@ export default function Layout() {
 
   useEffect(reload, [reload]);
 
-  const open = (dept) => requests.filter((r) => r.department === dept && r.status !== 'completed').length;
+  // Nhận thay đổi yêu cầu realtime; khi kết nối lại thì tải lại toàn bộ để không sót sự kiện
+  const [live, setLive] = useState('connecting');
+  useEffect(
+    () =>
+      subscribeRequests('/requests/events', {
+        token: loadSession()?.token,
+        onRequest: (r) => setRequests((list) => mergeRequest(list, r)),
+        onStatus: (s) => {
+          setLive(s);
+          if (s === 'live') reload();
+        },
+        onUnauthorized: logout,
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const open = (dept) => requests.filter((r) => r.department === dept && ['pending', 'in_progress'].includes(r.status)).length;
+  const syncOk = !error && live === 'live';
 
   const nav = [
     { to: '/rooms', label: 'Room Grid & Check-in', icon: 'grid_view' },
@@ -104,9 +122,9 @@ export default function Layout() {
             </p>
           </div>
           <div className="flex items-center gap-gutter-md">
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${error ? 'bg-error-tint text-on-error-tint' : 'bg-emerald-tint text-on-emerald-tint'}`}>
-              <span className={`w-2 h-2 rounded-full ${error ? 'bg-status-error' : 'bg-status-emerald'}`} aria-hidden="true" />
-              <span className="text-label-md">{error ? 'API Offline' : 'Sync Live'}</span>
+            <span role="status" className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${syncOk ? 'bg-emerald-tint text-on-emerald-tint' : 'bg-amber-tint text-on-amber-tint'}`}>
+              <span className={`w-2 h-2 rounded-full ${syncOk ? 'bg-status-emerald' : 'bg-status-amber'}`} aria-hidden="true" />
+              <span className="text-label-md">{error ? 'API Offline' : syncOk ? 'Sync Live' : 'Reconnecting…'}</span>
             </span>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container border border-outline-variant">
               <Icon name="person" className="text-[16px] text-on-surface-variant" />

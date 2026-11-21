@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { staffApi } from '../../api.js';
+import { loadSession, staffApi } from '../../api.js';
+import { mergeRequest, subscribeRequests } from '../../live.js';
 import { BottomNav, Icon } from '../../components/ui.jsx';
 import { DEPARTMENT_LABEL, initialsOf, useStaffAuth } from '../../staffAuth.jsx';
 import { STAFF_NAV, elapsedMinutes, itemsText } from './staffNav.js';
@@ -17,7 +18,7 @@ const FILTERS = [
 ];
 
 export default function TaskQueue() {
-  const { staff } = useStaffAuth();
+  const { staff, logout } = useStaffAuth();
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('all');
   const [onShift, setOnShift] = useState(true);
@@ -25,10 +26,20 @@ export default function TaskQueue() {
   const [error, setError] = useState('');
 
   const load = useCallback(() => {
-    // TODO(feature/request-tracking): nhận việc mới realtime thay vì tải khi mở trang
     staffApi('/requests').then(setTasks).catch((e) => setError(e.message));
   }, []);
   useEffect(load, [load]);
+
+  // Việc mới / thay đổi trạng thái đến ngay, không cần tải lại
+  useEffect(
+    () =>
+      subscribeRequests('/requests/events', {
+        token: loadSession('staff')?.token,
+        onRequest: (r) => setTasks((list) => mergeRequest(list, r)),
+        onUnauthorized: logout,
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // "My Queue": việc đang chờ mà mình được nhận + việc mình đang làm
   const mine = (t) => t.status !== 'completed' && ((t.status === 'pending' && canHandle(staff, t)) || t.assignedTo === staff.id);

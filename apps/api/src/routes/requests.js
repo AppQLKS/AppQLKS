@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { db, departmentOf, presentRequest } from '../data/store.js';
-import { HttpError, notImplemented } from '../middleware/errors.js';
+import { HttpError } from '../middleware/errors.js';
 import { requireStaff } from '../middleware/requireStaff.js';
+import { claimRequest, updateRequestStatus } from '../services/requestStatus.js';
+import { streamRequests } from '../sse.js';
 
 const router = Router();
 
@@ -20,37 +22,25 @@ router.get('/', (req, res) => {
   res.json(list);
 });
 
-router.get('/:id', (req, res) => {
-  const found = db.requests.find((r) => r.id === req.params.id);
-  if (!found) throw new HttpError(404, 'Request not found');
-  res.json(presentRequest(found));
+// GET /api/requests/events -> luồng realtime mọi thay đổi (Server-Sent Events)
+router.get('/events', (req, res) => streamRequests(req, res, () => true));
+
+router.get('/:id', (req, res) => res.json(presentRequest(findRequest(req.params.id))));
+
+// POST /api/requests/:id/claim -> khoá quyền xử lý cho nhân viên đang đăng nhập (người sau nhận 409)
+router.post('/:id/claim', (req, res) => {
+  res.json(presentRequest(claimRequest(findRequest(req.params.id), req.staff)));
 });
 
-/** Bộ phận nào được nhận việc của bộ phận nào. */
-export function canHandle(staff, request) {
-  if (staff.department === 'manager' || staff.department === 'reception') return true;
-  return staff.department === departmentOf(request.type);
+// PATCH /api/requests/:id/status { status: 'completed' | 'pending' | 'cancelled', reason? }
+router.patch('/:id/status', (req, res) => {
+  res.json(presentRequest(updateRequestStatus(findRequest(req.params.id), req.staff, req.body ?? {})));
+});
+
+function findRequest(id) {
+  const found = db.requests.find((r) => r.id === id);
+  if (!found) throw new HttpError(404, 'Request not found');
+  return found;
 }
 
-// POST /api/requests/:id/claim -> khoá quyền xử lý cho nhân viên đang đăng nhập.
-// Node xử lý tuần tự nên kiểm tra + gán trong cùng một lượt là nguyên tử:
-// hai người bấm cùng lúc thì người sau nhận 409.
-router.post('/:id/claim', (req, res) => {
-  const found = db.requests.find((r) => r.id === req.params.id);
-  if (!found) throw new HttpError(404, 'Request not found');
-  if (!canHandle(req.staff, found)) {
-    throw new HttpError(403, `This is a ${departmentOf(found.type)} task.`);
-  }
-  if (found.status !== 'pending') {
-    const by = presentRequest(found).assignee?.name;
-    throw new HttpError(409, by ? `Already claimed by ${by}.` : `This request is already ${found.status.replace('_', ' ')}.`);
-  }
-  found.status = 'in_progress';
-  found.assignedTo = req.staff.id;
-  found.claimedAt = new Date().toISOString();
-  res.json(presentRequest(found));
-});
-
-// TODO(feature/request-tracking): cập nhật trạng thái (hoàn thành, báo sự cố)
-router.patch('/:id/status', notImplemented('feature/request-tracking'));
 export default router;
