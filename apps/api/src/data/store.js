@@ -29,6 +29,29 @@ export function presentRequest(req) {
   return { ...req, department: departmentOf(req.type), assignee: req.assignedTo ? findStaff(req.assignedTo) : null };
 }
 
+/** Mã yêu cầu tiếp theo: REQ-<số lớn nhất + 1>. */
+export function nextRequestId() {
+  const max = db.requests.reduce((m, r) => Math.max(m, Number(r.id.replace(/\D/g, '')) || 0), 0);
+  return `REQ-${max + 1}`;
+}
+
+/** Thêm yêu cầu mới (đã được kiểm tra hợp lệ) vào hàng đợi. */
+export function addRequest({ roomNumber, type, title, items, note }) {
+  const request = {
+    id: nextRequestId(),
+    roomNumber,
+    type,
+    title,
+    items,
+    note: note || undefined,
+    status: 'pending',
+    assignedTo: null,
+    createdAt: new Date().toISOString(),
+  };
+  db.requests.push(request);
+  return request;
+}
+
 /** Hoá đơn dịch vụ phòng: các đơn đồ ăn chưa huỷ của phòng + phí dịch vụ 10%. */
 export function folioForRoom(number) {
   const lines = db.requests
