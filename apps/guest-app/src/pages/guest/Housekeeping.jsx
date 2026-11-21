@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DEMO_ROOM } from '../../api.js';
+import { useAuth } from '../../auth.jsx';
 import { BackButton, Badge, Icon } from '../../components/ui.jsx';
 
 const SLOTS = ['10:00', '13:00', '16:00', '19:00'];
@@ -10,14 +10,16 @@ const AMENITIES = [
 ];
 
 // TODO(feature/request-tracking): lấy timeline thật từ API
-const TIMELINE = [
+const timeline = (roomNumber) => [
   { title: 'Request Sent', sub: 'Clean Room Now + Towels & Water', time: '7:12 PM', state: 'done' },
   { title: 'Staff Assigned', sub: 'Maria L. • Floor 3 Attendant', time: '7:14 PM', state: 'done' },
-  { title: 'In Progress', sub: `Attendant is servicing Room ${DEMO_ROOM}`, time: 'Now', state: 'current' },
+  { title: 'In Progress', sub: `Attendant is servicing Room ${roomNumber}`, time: 'Now', state: 'current' },
   { title: 'Completed', sub: 'Estimated finish in 6 min', time: '~7:24 PM', state: 'todo' },
 ];
 
 export default function Housekeeping() {
+  const { room } = useAuth().session;
+  const TIMELINE = timeline(room.number);
   const [cleanNow, setCleanNow] = useState(false);
   const [slot, setSlot] = useState(null);
   const [amenities, setAmenities] = useState([]);
@@ -32,7 +34,7 @@ export default function Housekeeping() {
           <BackButton to="/home" />
           <div className="flex flex-col">
             <h1 className="font-headline text-headline-md">Housekeeping</h1>
-            <span className="text-body-sm text-on-surface-variant">Room {DEMO_ROOM} • Deluxe King</span>
+            <span className="text-body-sm text-on-surface-variant">Room {room.number} • {room.type}</span>
           </div>
         </div>
         <Badge dot>On Duty</Badge>
@@ -121,7 +123,7 @@ export default function Housekeeping() {
         <section aria-labelledby="live-status-heading" className="flex flex-col gap-md">
           <div className="flex items-center justify-between">
             <h2 id="live-status-heading" className="font-title text-title-md">Live Status Tracker</h2>
-            <span className="font-mono text-mono-sm text-secondary tabular-nums">ID #HK-{DEMO_ROOM}</span>
+            <span className="font-mono text-mono-sm text-secondary tabular-nums">ID #HK-{room.number}</span>
           </div>
           <article className="card p-xl">
             <ol className="flex flex-col">

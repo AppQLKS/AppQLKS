@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { BottomNav } from './components/ui.jsx';
+import { RequireGuest } from './auth.jsx';
 import Login from './pages/guest/Login.jsx';
 import Home from './pages/guest/Home.jsx';
 import Dining from './pages/guest/Dining.jsx';
@@ -24,10 +25,10 @@ export default function App() {
     <Routes>
       {/* Khách */}
       <Route path="/" element={<Login />} />
-      <Route path="/home" element={<><Home /><BottomNav items={GUEST_NAV} /></>} />
-      <Route path="/dining" element={<Dining />} />
-      <Route path="/housekeeping" element={<Housekeeping />} />
-      <Route path="/concierge" element={<Concierge />} />
+      <Route path="/home" element={<RequireGuest><Home /><BottomNav items={GUEST_NAV} /></RequireGuest>} />
+      <Route path="/dining" element={<RequireGuest><Dining /></RequireGuest>} />
+      <Route path="/housekeeping" element={<RequireGuest><Housekeeping /></RequireGuest>} />
+      <Route path="/concierge" element={<RequireGuest><Concierge /></RequireGuest>} />
 
       {/* Nhân viên (mobile) */}
       <Route path="/staff/login" element={<StaffLogin />} />

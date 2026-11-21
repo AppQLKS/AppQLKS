@@ -7,6 +7,7 @@ import authRouter from './routes/auth.js';
 import requestsRouter from './routes/requests.js';
 import chatRouter from './routes/chat.js';
 import checkoutRouter from './routes/checkout.js';
+import meRouter from './routes/me.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function createApp() {
@@ -22,6 +23,7 @@ export function createApp() {
   app.use('/api/rooms', roomsRouter);
   app.use('/api/menu', menuRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/me', meRouter);
   app.use('/api/requests', requestsRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/checkout', checkoutRouter);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { api, DEMO_ROOM } from '../../api.js';
+import { api } from '../../api.js';
+import { useAuth } from '../../auth.jsx';
 import { BackButton, Icon, money } from '../../components/ui.jsx';
 
 // Hội thoại mẫu theo mockup.
@@ -20,6 +21,7 @@ function Bold({ text }) {
 }
 
 export default function Concierge() {
+  const { room } = useAuth().session;
   const [messages, setMessages] = useState(SAMPLE);
   const [draft, setDraft] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -29,7 +31,7 @@ export default function Concierge() {
   const { hash } = useLocation();
 
   useEffect(() => {
-    api(`/rooms/${DEMO_ROOM}`).then((r) => setFolio(r.folio)).catch(() => {});
+    api('/me/folio').then(setFolio).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function Concierge() {
             </div>
             <div className="flex flex-col">
               <h1 className="font-headline text-title-lg">AI Concierge</h1>
-              <span className="text-body-sm text-on-surface-variant">Room {DEMO_ROOM} • Online</span>
+              <span className="text-body-sm text-on-surface-variant">Room {room.number} • Online</span>
             </div>
           </div>
         </div>
@@ -86,7 +88,7 @@ export default function Concierge() {
                     </div>
                     <span className="font-mono text-mono-sm tabular-nums">{money(m.action.total)}</span>
                   </header>
-                  <p className="font-title text-title-sm text-pretty">Confirm Order: {m.action.summary} to Room {DEMO_ROOM}?</p>
+                  <p className="font-title text-title-sm text-pretty">Confirm Order: {m.action.summary} to Room {room.number}?</p>
                   {confirmed ? (
                     <div className="w-full py-sm px-md rounded-md bg-success-container text-on-success-container font-label text-label-md flex items-center justify-center gap-xs">
                       <Icon name="check_circle" className="text-title-md" />
@@ -110,7 +112,7 @@ export default function Concierge() {
             <header className="flex items-start justify-between gap-md">
               <div className="flex flex-col gap-xs">
                 <span className="font-label text-label-sm text-secondary uppercase tracking-wider">Express Checkout Summary</span>
-                <h2 id="checkout-summary-heading" className="font-title text-title-md">Room {DEMO_ROOM} Folio</h2>
+                <h2 id="checkout-summary-heading" className="font-title text-title-md">Room {room.number} Folio</h2>
               </div>
               <span className="font-headline text-headline-md tabular-nums">{folio ? money(folio.total) : '—'}</span>
             </header>

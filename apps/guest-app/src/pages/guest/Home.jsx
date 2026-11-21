@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, DEMO_ROOM } from '../../api.js';
+import { api } from '../../api.js';
+import { useAuth } from '../../auth.jsx';
 import { Badge, Icon, Logo, StepBar } from '../../components/ui.jsx';
 
 const services = [
@@ -18,19 +19,18 @@ const greeting = () => {
 };
 
 export default function Home() {
-  const [room, setRoom] = useState(null);
+  const { session, logout } = useAuth();
   const [active, setActive] = useState(null);
 
   useEffect(() => {
-    // TODO(feature/guest-auth-room-code): lấy phòng từ phiên đăng nhập thay vì DEMO_ROOM
-    api(`/rooms/${DEMO_ROOM}`).then(setRoom).catch(() => {});
     // TODO(feature/request-tracking): cập nhật realtime
-    api(`/requests?room=${DEMO_ROOM}`)
+    api('/me/requests')
       .then((list) => setActive(list.find((r) => r.status !== 'completed' && r.status !== 'cancelled') ?? null))
       .catch(() => {});
   }, []);
 
-  const firstName = room?.stay?.guestName?.split(' ')[0] ?? 'Guest';
+  const { room, guest } = session;
+  const firstName = guest.name.split(' ')[0];
 
   return (
     <div className="min-h-screen max-w-[390px] mx-auto flex flex-col pb-24">
@@ -40,12 +40,23 @@ export default function Home() {
             <Logo size={36} mark={20} showBar={false} />
             <span className="font-title text-title-sm">AppHotel</span>
           </div>
-          <Badge dot>Active Stay</Badge>
+          <div className="flex items-center gap-sm">
+            <Badge dot>Active Stay</Badge>
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="Sign out of this device"
+              title="Sign out"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors duration-state-change"
+            >
+              <Icon name="logout" className="text-title-md" />
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-xs pt-xs">
           <p className="font-label text-label-md text-secondary">{greeting()}, {firstName}</p>
           <h1 className="font-headline text-display-lg-mobile">
-            Room {DEMO_ROOM} • {room?.type ?? '…'}
+            Room {room.number} • {room.type}
           </h1>
         </div>
       </header>
