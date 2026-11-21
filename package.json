@@ -1,0 +1,22 @@
+{
+  "name": "appqlks",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AppHotel – room service, housekeeping & AI concierge for boutique hotels",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,admin,guest -c blue,magenta,green \"npm run dev -w apps/api\" \"npm run dev -w apps/web-admin\" \"npm run dev -w apps/guest-app\"",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:admin": "npm run dev -w apps/web-admin",
+    "dev:guest": "npm run dev -w apps/guest-app",
+    "build": "npm run build -w apps/web-admin && npm run build -w apps/guest-app"
+  },
+  "devDependencies": {
+    "concurrently": "9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
