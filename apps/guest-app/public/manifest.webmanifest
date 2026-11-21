@@ -1,0 +1,9 @@
+{
+  "name": "AppHotel – Boutique Stay",
+  "short_name": "AppHotel",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f5f0",
+  "theme_color": "#1f4733",
+  "icons": []
+}
