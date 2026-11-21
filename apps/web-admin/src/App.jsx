@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
-import RoomGrid from './pages/RoomGrid.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import QueuePage from './pages/QueuePage.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -8,12 +9,12 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/rooms" replace />} />
-        <Route path="/rooms" element={<RoomGrid />} />
-        <Route path="/kitchen" element={<Placeholder title="F&B Kitchen Orders" branch="feature/staff-web-portal" />} />
-        <Route path="/housekeeping" element={<Placeholder title="Housekeeping Queue" branch="feature/staff-web-portal" />} />
+        <Route path="/rooms" element={<Dashboard />} />
+        <Route path="/kitchen" element={<QueuePage department="kitchen" />} />
+        <Route path="/housekeeping" element={<QueuePage department="housekeeping" />} />
         <Route path="/knowledge" element={<Placeholder title="AI Knowledge Base" branch="feature/ai-chatbot" />} />
-        <Route path="/analytics" element={<Placeholder title="Analytics & Reports" branch="(sau MVP)" />} />
-        <Route path="*" element={<Placeholder title="Không tìm thấy trang" />} />
+        <Route path="/analytics" element={<Placeholder title="Analytics & Reports" branch="(after MVP)" />} />
+        <Route path="*" element={<Placeholder title="Page not found" />} />
       </Route>
     </Routes>
   );
