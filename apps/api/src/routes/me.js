@@ -3,6 +3,7 @@ import { db, findRoom, folioForRoom, presentRequest } from '../data/store.js';
 import { requireGuest } from '../middleware/requireGuest.js';
 import { HttpError } from '../middleware/errors.js';
 import { estimateMinutes, placeFoodOrder } from '../services/foodOrders.js';
+import { estimateHousekeepingMinutes, placeHousekeepingRequest } from '../services/housekeeping.js';
 
 /** Thông tin phiên trả cho app khách — không bao giờ kèm mã cửa. */
 export function presentSession(stay) {
@@ -31,13 +32,17 @@ router.get('/requests', (req, res) => {
 
 // POST /api/me/requests { type: 'food', items: [{ menuId, qty }], note }
 router.post('/requests', (req, res) => {
+//                  { type: 'housekeeping', service: 'clean_now'|'scheduled'|null, slot, amenities: [...], note }
   const { type } = req.body ?? {};
-  if (type !== 'food') {
-    // TODO(feature/housekeeping): type 'housekeeping' | 'amenity'
-    throw new HttpError(400, `Unsupported request type: ${type}`);
+  if (type === 'food') {
+    const request = placeFoodOrder(req.stay.roomNumber, req.body);
+    return res.status(201).json({ ...presentRequest(request), etaMinutes: estimateMinutes(request) });
   }
-  const request = placeFoodOrder(req.stay.roomNumber, req.body);
-  res.status(201).json({ ...presentRequest(request), etaMinutes: estimateMinutes(request) });
+  if (type === 'housekeeping') {
+    const request = placeHousekeepingRequest(req.stay.roomNumber, req.body);
+    return res.status(201).json({ ...presentRequest(request), etaMinutes: estimateHousekeepingMinutes(request) });
+  }
+  throw new HttpError(400, `Unsupported request type: ${type}`);
 });
 
 // GET /api/me/folio -> hoá đơn dịch vụ phòng

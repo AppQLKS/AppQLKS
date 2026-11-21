@@ -38,6 +38,7 @@ Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:400
 | POST | `/api/auth/guest/logout` | ✅ |
 | GET | `/api/me`, `/api/me/requests`, `/api/me/folio` | ✅ cần `Authorization: Bearer <token>` |
 | POST | `/api/me/requests` `{ type: "food", items: [{ menuId, qty }], note }` | ✅ đặt món (giá lấy từ thực đơn ở server) |
+| POST | `/api/me/requests` `{ type: "housekeeping", service: "clean_now"|"scheduled"|null, slot, amenities, note }` | ✅ dọn phòng / hẹn giờ / xin tiện nghi (chặn đặt dọn trùng) |
 | POST | `/api/auth/staff` | 🚧 501 – `feature/staff-web-portal` |
 | POST | `/api/requests/:id/claim`, PATCH `/:id/status` | 🚧 501 – `feature/staff-web-portal`, `feature/request-tracking` |
 | POST | `/api/chat` | 🚧 501 – `feature/ai-chatbot` |
