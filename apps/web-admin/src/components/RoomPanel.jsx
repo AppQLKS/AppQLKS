@@ -96,6 +96,12 @@ function RoomDrawer({ number, onClose }) {
           <span className="text-label-md text-on-surface-variant whitespace-nowrap">Dynamic Door Code</span>
           <span className="text-label-sm text-on-blue-tint bg-blue-tint px-2 py-0.5 rounded-full shrink-0">Active</span>
         </div>
+        {!code ? (
+          <p className="flex items-center gap-2 text-body-sm text-on-surface-variant">
+            <Icon name="lock" className="text-[16px]" />
+            Visible to reception and managers only.
+          </p>
+        ) : (
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-mono-code tabular-nums">{formatCode(code)}</span>
           <div className="flex items-center gap-1.5">
@@ -109,6 +115,7 @@ function RoomDrawer({ number, onClose }) {
             </button>
           </div>
         </div>
+        )}
         {regenError && <p className="text-body-sm text-on-error-tint">{regenError}</p>}
       </div>
 

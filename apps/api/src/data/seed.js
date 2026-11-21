@@ -1,4 +1,7 @@
 // Dữ liệu mẫu khớp với mockup – sẽ thay bằng CSDL thật sau.
+import { hashPassword } from '../auth/passwords.js';
+
+export const DEMO_STAFF_PASSWORD = process.env.DEMO_STAFF_PASSWORD || 'shift2026';
 
 /** @typedef {'occupied'|'vacant'|'cleaning'} RoomStatus */
 /** @typedef {'pending'|'in_progress'|'completed'|'cancelled'} RequestStatus */
@@ -69,13 +72,14 @@ export function seed() {
     { id: 'm6', name: 'Sparkling Mineral Water', description: '750ml bottle', price: 7, prepMinutes: 2, category: 'drinks', image: null },
   ];
 
+  // Tài khoản demo — mật khẩu chung DEMO_STAFF_PASSWORD, chỉ dùng khi phát triển
   const staff = [
-    { id: 'RC-01', name: 'Maya Lin', department: 'reception' },
-    { id: 'KT-02', name: 'Marco Rossi', department: 'kitchen' },
-    { id: 'HK-04', name: 'Minh Anh', department: 'housekeeping' },
-    { id: 'HK-05', name: 'Soraia Silva', department: 'housekeeping' },
-    { id: 'MG-01', name: 'David Park', department: 'manager' },
-  ];
+    { id: 'RC-01', name: 'Maya Lin', department: 'reception', email: 'maya@apphotel.vn' },
+    { id: 'KT-02', name: 'Marco Rossi', department: 'kitchen', email: 'marco@apphotel.vn' },
+    { id: 'HK-04', name: 'Minh Anh', department: 'housekeeping', email: 'minhanh@apphotel.vn' },
+    { id: 'HK-05', name: 'Soraia Silva', department: 'housekeeping', email: 'soraia@apphotel.vn' },
+    { id: 'MG-01', name: 'David Park', department: 'manager', email: 'david@apphotel.vn' },
+  ].map((s) => ({ ...s, passwordHash: hashPassword(DEMO_STAFF_PASSWORD) }));
 
   /**
    * department suy ra từ type: food -> kitchen, còn lại -> housekeeping

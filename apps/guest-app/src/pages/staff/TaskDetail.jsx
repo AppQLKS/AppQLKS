@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '../../api.js';
+import { staffApi } from '../../api.js';
 import { BackPill, Badge, Icon, StepBar } from '../../components/ui.jsx';
 import { elapsedMinutes } from './staffNav.js';
 
@@ -17,11 +17,11 @@ export default function TaskDetail() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    api(`/requests/${id}`)
+    staffApi(`/requests/${id}`)
       .then((t) => {
         setTask(t);
         setCompleted(t.status === 'completed');
-        return api(`/rooms/${t.roomNumber}`).then(setRoom);
+        return staffApi(`/rooms/${t.roomNumber}`).then(setRoom);
       })
       .catch((e) => setError(e.message));
   }, [id]);

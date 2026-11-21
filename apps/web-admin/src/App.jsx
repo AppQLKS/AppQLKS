@@ -3,11 +3,20 @@ import Layout from './components/Layout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import QueuePage from './pages/QueuePage.jsx';
 import Placeholder from './pages/Placeholder.jsx';
+import Login from './pages/Login.jsx';
+import { RequireStaff } from './staff.jsx';
 
 export default function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route
+        element={
+          <RequireStaff>
+            <Layout />
+          </RequireStaff>
+        }
+      >
         <Route index element={<Navigate to="/rooms" replace />} />
         <Route path="/rooms" element={<Dashboard />} />
         <Route path="/kitchen" element={<QueuePage department="kitchen" />} />

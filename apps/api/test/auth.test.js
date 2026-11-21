@@ -61,7 +61,9 @@ test('rotating the door code signs out existing guest sessions', async () => {
   const { token } = await (await post('/auth/guest', { code: 'K4R92B' })).json();
   assert.equal((await get('/me', token)).status, 200);
 
-  const { accessCode } = await (await post('/rooms/101/code')).json();
+  const { token: staff } = await (await post('/auth/staff', { login: 'RC-01', password: 'shift2026' })).json();
+  assert.equal((await post('/rooms/101/code')).status, 401); // khách / người ngoài không đổi được mã
+  const { accessCode } = await (await post('/rooms/101/code', {}, staff)).json();
   assert.match(accessCode, /^[A-Z2-9]{6}$/);
   assert.notEqual(accessCode, 'K4R92B');
 

@@ -34,7 +34,8 @@ test('clean now + amenities creates one housekeeping request', async () => {
   assert.deepEqual(req.items.map((i) => i.name), ['Full room tidying & bed making', 'Fresh Bath Towels', 'Bottled Water']);
   assert.equal(req.etaMinutes, 20);
 
-  const queue = await (await fetch(`${base}/requests?department=housekeeping`)).json();
+  const { token: staff } = await (await post('/auth/staff', { login: 'HK-04', password: 'shift2026' })).json();
+  const queue = await (await fetch(`${base}/requests?department=housekeeping`, { headers: { Authorization: `Bearer ${staff}` } })).json();
   assert.equal(queue[0].id, req.id);
 });
 
