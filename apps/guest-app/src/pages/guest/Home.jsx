@@ -7,7 +7,7 @@ const services = [
   { to: '/dining', title: 'Room Service & Dining', sub: 'All-day in-suite menu', icon: 'room_service', tone: 'secondary' },
   { to: '/housekeeping', title: 'Housekeeping', sub: 'Cleaning & amenities', icon: 'cleaning_services', tone: 'primary' },
   { to: '/concierge', title: 'AI Concierge', sub: 'Local tips & quick orders', icon: 'auto_awesome', tone: 'secondary' },
-  { to: '/concierge#checkout', title: 'Express Checkout', sub: 'View charges & depart', icon: 'receipt_long', tone: 'primary' },
+  { to: '/checkout', title: 'Express Checkout', sub: 'View charges & depart', icon: 'receipt_long', tone: 'primary' },
 ];
 
 const STEP_OF = { pending: 0, in_progress: 2, completed: 4 }; // 4 = mọi bước đã xong

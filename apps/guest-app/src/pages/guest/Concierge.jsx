@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
+import CheckoutCard from '../../components/CheckoutCard.jsx';
 import { BackButton, Icon, money } from '../../components/ui.jsx';
 
 // Hội thoại mẫu theo mockup.
@@ -25,14 +25,8 @@ export default function Concierge() {
   const [messages, setMessages] = useState(SAMPLE);
   const [draft, setDraft] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const [checkoutRequested, setCheckoutRequested] = useState(false);
-  const [folio, setFolio] = useState(null);
   const checkoutRef = useRef(null);
   const { hash } = useLocation();
-
-  useEffect(() => {
-    api('/me/folio').then(setFolio).catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (hash === '#checkout') checkoutRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -107,25 +101,8 @@ export default function Concierge() {
           ),
         )}
 
-        <section ref={checkoutRef} id="checkout" aria-labelledby="checkout-summary-heading" className="pt-sm scroll-mt-lg">
-          <article className="card !shadow-md !border-outline-variant p-xl flex flex-col gap-md">
-            <header className="flex items-start justify-between gap-md">
-              <div className="flex flex-col gap-xs">
-                <span className="font-label text-label-sm text-secondary uppercase tracking-wider">Express Checkout Summary</span>
-                <h2 id="checkout-summary-heading" className="font-title text-title-md">Room {room.number} Folio</h2>
-              </div>
-              <span className="font-headline text-headline-md tabular-nums">{folio ? money(folio.total) : '—'}</span>
-            </header>
-            <div className="flex items-center justify-between text-body-sm text-on-surface-variant border-t border-outline-variant/60 pt-md">
-              <span>Total room service charges</span>
-              <span className="font-mono text-mono-sm text-on-surface tabular-nums">{folio ? `${folio.lines.length} items` : ''}</span>
-            </div>
-            {/* TODO(feature/express-checkout): POST /api/checkout/:room/request */}
-            <button type="button" disabled={checkoutRequested} onClick={() => setCheckoutRequested(true)} className="btn-primary w-full px-xl py-md">
-              <Icon name={checkoutRequested ? 'hourglass_top' : 'logout'} className="text-title-md" />
-              {checkoutRequested ? 'Waiting for Reception Approval' : 'Request Fast Check-out'}
-            </button>
-          </article>
+        <section ref={checkoutRef} id="checkout" aria-label="Express checkout" className="pt-sm scroll-mt-lg">
+          <CheckoutCard showDetailsLink />
         </section>
       </main>
 

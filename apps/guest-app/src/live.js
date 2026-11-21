@@ -5,7 +5,10 @@
  *
  * @returns {() => void} hàm huỷ đăng ký
  */
-export function subscribeRequests(path, { token, onRequest, onStatus = () => {}, onUnauthorized = () => {} }) {
+export function subscribeRequests(
+  path,
+  { token, onRequest, onStay = () => {}, onCheckout = () => {}, onStatus = () => {}, onUnauthorized = () => {} },
+) {
   let stopped = false;
   let controller;
   let retry = 1000;
@@ -36,6 +39,8 @@ export function subscribeRequests(path, { token, onRequest, onStatus = () => {},
           const type = /^event: (.+)$/m.exec(chunk)?.[1];
           const data = /^data: (.+)$/m.exec(chunk)?.[1];
           if (type === 'request' && data) onRequest(JSON.parse(data));
+          if (type === 'stay' && data) onStay(JSON.parse(data));
+          if (type === 'checkout') return onCheckout(JSON.parse(data));
           if (type === 'unauthorized') return onUnauthorized();
         }
       }

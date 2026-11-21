@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 
 /** Khởi động API trên cổng ngẫu nhiên; trả về các hàm gọi tiện dụng. */
@@ -24,3 +25,48 @@ export async function startApi() {
     guestToken: async (code) => (await (await call('POST', '/auth/guest', { code })).json()).token,
   };
 }
+
+/** Mở luồng SSE, gom các sự kiện 'request' cho tới khi gọi stop(). */
+export async function openSse(base, path, token) {
+  const controller = new AbortController();
+  const res = await fetch(base + path, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+  assert.equal(res.headers.get('content-type'), 'text/event-stream');
+  const events = [];
+  const waiters = [];
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const type = /^event: (.+)$/m.exec(chunk)?.[1];
+          const data = /^data: (.+)$/m.exec(chunk)?.[1];
+          if (type) events.push({ type, data: JSON.parse(data) });
+          waiters.splice(0).forEach((w) => w());
+        }
+      }
+    } catch {
+      /* aborted */
+    }
+  })();
+  const waitFor = async (pred, ms = 1000) => {
+    const end = Date.now() + ms;
+    while (!events.some(pred)) {
+      if (Date.now() > end) throw new Error('timed out waiting for event');
+      await new Promise((r) => {
+        waiters.push(r);
+        setTimeout(r, 50);
+      });
+    }
+    return events.find(pred);
+  };
+  return { events, waitFor, stop: () => controller.abort() };
+}
+

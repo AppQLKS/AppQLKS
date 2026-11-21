@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/requests/events -> luồng realtime mọi thay đổi (Server-Sent Events)
-router.get('/events', (req, res) => streamRequests(req, res, () => true));
+router.get('/events', (req, res) => streamRequests(req, res, () => true, undefined, { stayFilter: () => true }));
 
 router.get('/:id', (req, res) => res.json(presentRequest(findRequest(req.params.id))));
 
