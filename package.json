@@ -11,6 +11,7 @@
     "dev:api": "npm run dev -w apps/api",
     "dev:admin": "npm run dev -w apps/web-admin",
     "dev:guest": "npm run dev -w apps/guest-app",
+    "android": "npm run android:build -w apps/guest-app && npm run android:open -w apps/guest-app",
     "build": "npm run build -w apps/web-admin && npm run build -w apps/guest-app"
   },
   "devDependencies": {
