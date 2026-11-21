@@ -1,34 +1,71 @@
-import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../auth.jsx';
 import { Icon, Logo } from '../../components/ui.jsx';
 
 const LENGTH = 6;
+const clean = (s) => String(s ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, LENGTH);
 
 export default function Login() {
-  const [chars, setChars] = useState(Array(LENGTH).fill(''));
+  const [params] = useSearchParams();
+  const qrCode = clean(params.get('code')); // QR in trên thẻ phòng mở link /?code=A8K92P
+  const [chars, setChars] = useState(() => Array.from({ length: LENGTH }, (_, i) => qrCode[i] ?? ''));
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [showQrHint, setShowQrHint] = useState(false);
   const inputs = useRef([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session, login, expired } = useAuth();
   const code = chars.join('');
 
+  const signIn = async (value) => {
+    setBusy(true);
+    setError('');
+    try {
+      await login(value);
+      navigate(location.state?.from ?? '/home', { replace: true });
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (qrCode.length === LENGTH && !session) signIn(qrCode);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const setChar = (i, raw) => {
-    const v = raw.replace(/[^a-z0-9]/gi, '').slice(-1).toUpperCase();
-    setChars((prev) => prev.map((c, idx) => (idx === i ? v : c)));
-    if (v && i < LENGTH - 1) inputs.current[i + 1]?.focus();
+    let typed = raw.replace(/[^a-z0-9]/gi, '').toUpperCase();
+    // Ô đang có 1 ký tự và người dùng gõ thêm -> giữ ký tự mới
+    if (typed.length === 2 && typed[0] === chars[i]) typed = typed[1];
+    setError('');
+    if (typed.length <= 1) {
+      setChars((prev) => prev.map((c, idx) => (idx === i ? typed : c)));
+      if (typed && i < LENGTH - 1) inputs.current[i + 1]?.focus();
+      return;
+    }
+    // Nhiều ký tự vào 1 ô cùng lúc (bàn phím tự điền mã, gõ nhanh) -> rải sang các ô sau
+    const spread = typed.slice(0, LENGTH - i);
+    setChars((prev) => prev.map((c, idx) => (idx >= i && idx < i + spread.length ? spread[idx - i] : c)));
+    inputs.current[Math.min(i + spread.length, LENGTH - 1)]?.focus();
   };
 
   const onPaste = (e) => {
-    const pasted = e.clipboardData.getData('text').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, LENGTH);
+    const pasted = clean(e.clipboardData.getData('text'));
     if (!pasted) return;
     e.preventDefault();
     setChars(Array.from({ length: LENGTH }, (_, i) => pasted[i] ?? ''));
+    setError('');
     inputs.current[Math.min(pasted.length, LENGTH - 1)]?.focus();
   };
 
   const submit = (e) => {
     e.preventDefault();
-    // TODO(feature/guest-auth-room-code): POST /api/auth/guest { code } -> lưu token phiên khách
-    navigate('/home');
+    if (code.length === LENGTH && !busy) signIn(code);
   };
+
+  if (session?.token && !busy) return <Navigate to="/home" replace />;
 
   const box = (i) => (
     <input
@@ -39,11 +76,15 @@ export default function Login() {
       onChange={(e) => setChar(i, e.target.value)}
       onKeyDown={(e) => e.key === 'Backspace' && !chars[i] && i > 0 && inputs.current[i - 1]?.focus()}
       onPaste={onPaste}
-      maxLength={2}
+      maxLength={LENGTH}
       autoCapitalize="characters"
       autoComplete="one-time-code"
       aria-label={`Code character ${i + 1}`}
-      className="w-11 h-14 text-center font-mono text-mono-lg uppercase rounded-md bg-surface-container-low border border-outline-variant text-on-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"
+      aria-invalid={!!error}
+      disabled={busy}
+      className={`w-11 h-14 text-center font-mono text-mono-lg uppercase rounded-md bg-surface-container-low border text-on-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary ${
+        error ? 'border-error' : 'border-outline-variant'
+      }`}
     />
   );
 
@@ -72,22 +113,32 @@ export default function Login() {
               <span className="font-mono text-mono-lg text-secondary px-xs select-none" aria-hidden="true">-</span>
               {[3, 4, 5].map(box)}
             </div>
+            {(error || expired) && (
+              <p role="alert" className="flex items-start gap-xs text-body-sm text-error pt-xs">
+                <Icon name="error" className="text-title-sm shrink-0 mt-[1px]" />
+                {error || 'Your session ended (the room code was changed). Please enter the new code.'}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-md">
-            <button type="submit" disabled={code.length < LENGTH} className="btn-primary w-full px-xl py-lg">
-              Access Room Services
+            <button type="submit" disabled={code.length < LENGTH || busy} className="btn-primary w-full px-xl py-lg">
+              {busy ? 'Checking code…' : 'Access Room Services'}
             </button>
             <div className="flex items-center gap-md py-xs">
               <div className="h-px flex-1 bg-outline-variant" />
               <span className="text-body-sm text-on-surface-variant">or</span>
               <div className="h-px flex-1 bg-outline-variant" />
             </div>
-            {/* TODO(feature/guest-auth-room-code): quét QR chứa mã phòng */}
-            <button type="button" className="btn-outline w-full px-xl py-md">
+            <button type="button" onClick={() => setShowQrHint((v) => !v)} aria-expanded={showQrHint} className="btn-outline w-full px-xl py-md">
               <Icon name="qr_code_scanner" className="text-title-md text-accent" />
               Scan Room QR Code
             </button>
+            {showQrHint && (
+              <p className="text-body-sm text-on-surface-variant text-center text-pretty">
+                Open your phone camera and point it at the QR code on your keycard sleeve — you will be signed in automatically.
+              </p>
+            )}
           </div>
         </form>
       </main>

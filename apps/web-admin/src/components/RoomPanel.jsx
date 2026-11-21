@@ -31,8 +31,10 @@ function RoomDrawer({ number, onClose }) {
   const [code, setCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [regenError, setRegenError] = useState('');
 
   useEffect(() => {
+    setRegenError('');
     setApproved(false);
     api(`/rooms/${number}`)
       .then((d) => {
@@ -51,10 +53,16 @@ function RoomDrawer({ number, onClose }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // TODO(feature/guest-auth-room-code): sinh mã mới ở server (POST /api/rooms/:n/code)
-  const regenerate = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    setCode(Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(''));
+  // Sinh mã mới ở server; thiết bị khách đang đăng nhập bằng mã cũ sẽ bị đăng xuất
+  const regenerate = async () => {
+    if (!window.confirm(`Generate a new door code for Room ${number}? Guests signed in with the old code will be signed out.`)) return;
+    setRegenError('');
+    try {
+      const { accessCode } = await api(`/rooms/${number}/code`, { method: 'POST' });
+      setCode(accessCode);
+    } catch (e) {
+      setRegenError(e.message);
+    }
   };
 
   return (
@@ -101,6 +109,7 @@ function RoomDrawer({ number, onClose }) {
             </button>
           </div>
         </div>
+        {regenError && <p className="text-body-sm text-on-error-tint">{regenError}</p>}
       </div>
 
       <div className="flex flex-col gap-gutter-sm">

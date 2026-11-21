@@ -31,12 +31,21 @@ Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:400
 |---|---|---|
 | GET | `/api/health` | ✅ |
 | GET | `/api/rooms`, `/api/rooms/:number` | ✅ (dữ liệu mẫu in-memory) |
+| POST | `/api/rooms/:number/code` | ✅ đổi mã cửa, đăng xuất thiết bị khách của phòng |
 | GET | `/api/menu?category=` | ✅ |
-| GET | `/api/requests` | ✅ |
-| POST | `/api/auth/guest`, `/api/auth/staff` | 🚧 501 – `feature/guest-auth-room-code`, `feature/staff-web-portal` |
+| GET | `/api/requests?department=&room=`, `/api/requests/:id` | ✅ |
+| POST | `/api/auth/guest` `{ code }` | ✅ đăng nhập bằng mã phòng → `token` (khoá 5 phút sau 5 lần sai) |
+| POST | `/api/auth/guest/logout` | ✅ |
+| GET | `/api/me`, `/api/me/requests`, `/api/me/folio` | ✅ cần `Authorization: Bearer <token>` |
+| POST | `/api/auth/staff` | 🚧 501 – `feature/staff-web-portal` |
 | POST | `/api/requests`, `/:id/claim`, PATCH `/:id/status` | 🚧 501 – các nhánh dịch vụ |
 | POST | `/api/chat` | 🚧 501 – `feature/ai-chatbot` |
 | * | `/api/checkout/:room/...` | 🚧 501 – `feature/express-checkout` |
+
+Chạy test API: `npm test -w apps/api`.
+
+**Đăng nhập khách:** mã demo `A8K-92P` (phòng 305) hoặc `X7M-41Q` (phòng 204). QR trên thẻ phòng chỉ cần
+mở link `http://<host>:5174/?code=A8K92P` để tự đăng nhập.
 
 Các chỗ cần làm tiếp được đánh dấu `TODO(feature/...)` trong code.
 Quy trình Git xem [CONTRIBUTING.md](CONTRIBUTING.md).

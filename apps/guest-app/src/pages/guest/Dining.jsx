@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, DEMO_ROOM } from '../../api.js';
+import { api } from '../../api.js';
+import { useAuth } from '../../auth.jsx';
 import { BackButton, Icon, money } from '../../components/ui.jsx';
 
 const categories = [
@@ -10,6 +11,7 @@ const categories = [
 ];
 
 export default function Dining() {
+  const { room } = useAuth().session;
   const [menu, setMenu] = useState([]);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('all');
@@ -42,7 +44,7 @@ export default function Dining() {
           <BackButton to="/home" />
           <div className="flex flex-col">
             <h1 className="font-headline text-title-lg">Room Service &amp; Dining</h1>
-            <span className="text-body-sm text-on-surface-variant">Delivering to Room {DEMO_ROOM}</span>
+            <span className="text-body-sm text-on-surface-variant">Delivering to Room {room.number}</span>
           </div>
         </div>
         <span className="inline-flex items-center px-md py-xs rounded-full bg-secondary-container text-on-secondary-container font-label text-label-sm shrink-0">
@@ -142,7 +144,7 @@ export default function Dining() {
             </span>
             <div className="flex flex-col">
               <span className="font-title text-title-md tabular-nums">{money(total)}</span>
-              <span className="text-body-sm text-on-surface-variant">Room {DEMO_ROOM} folio</span>
+              <span className="text-body-sm text-on-surface-variant">Room {room.number} folio</span>
             </div>
           </div>
           {/* TODO(feature/room-service-dining): POST /api/requests { type: 'food', items, note } */}
