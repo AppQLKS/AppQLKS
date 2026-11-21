@@ -83,6 +83,14 @@ export function publishRequest(request) {
   bus.emit('request', presentRequest(request));
 }
 
+/**
+ * Sự kiện về lượt lưu trú (trả phòng...).
+ * @param {'checkout_requested'|'checkout_cancelled'|'checked_out'} type
+ */
+export function publishStay(type, stay, extra = {}) {
+  bus.emit('stay', { type, roomNumber: stay.roomNumber, guestName: stay.guestName, at: new Date().toISOString(), ...extra });
+}
+
 // Dữ liệu mẫu chưa có lịch sử -> dựng lại từ trạng thái hiện tại
 for (const r of db.requests) {
   if (r.history) continue;

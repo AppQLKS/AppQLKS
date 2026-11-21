@@ -46,7 +46,9 @@ Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:400
 | GET | `/api/requests/events` | ✅ 🔒 luồng realtime (SSE) mọi thay đổi yêu cầu cho nhân viên |
 | GET | `/api/me/events` | ✅ luồng realtime (SSE) yêu cầu của phòng khách; tự đóng khi mã cửa bị đổi |
 | POST | `/api/chat` | 🚧 501 – `feature/ai-chatbot` |
-| * | `/api/checkout/:room/...` | 🚧 501 – `feature/express-checkout` |
+| GET / POST / DELETE | `/api/me/checkout` | ✅ khách xem tình trạng / xin trả phòng nhanh / huỷ yêu cầu |
+| GET | `/api/checkout` | ✅ 🔒 lễ tân/quản lý – các phòng chờ duyệt trả phòng (kèm hoá đơn) |
+| POST | `/api/checkout/:room/approve` | ✅ 🔒 lễ tân/quản lý – hoàn tất trả phòng: chốt hoá đơn, huỷ yêu cầu còn mở, thu hồi mã cửa, tạo việc dọn phòng |
 
 Chạy test API: `npm test -w apps/api`.
 

@@ -9,17 +9,20 @@ export default function Layout() {
   const { staff, role, logout } = useStaff();
   const [rooms, setRooms] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [checkouts, setCheckouts] = useState([]); // phòng đang chờ duyệt trả phòng
   const [error, setError] = useState('');
+  const canCheckout = ['reception', 'manager'].includes(staff.department);
 
   const reload = useCallback(() => {
-    Promise.all([api('/rooms'), api('/requests')])
-      .then(([r, q]) => {
+    Promise.all([api('/rooms'), api('/requests'), canCheckout ? api('/checkout') : Promise.resolve([])])
+      .then(([r, q, c]) => {
         setRooms(r);
         setRequests(q);
+        setCheckouts(c);
         setError('');
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [canCheckout]);
 
   useEffect(reload, [reload]);
 
@@ -30,6 +33,7 @@ export default function Layout() {
       subscribeRequests('/requests/events', {
         token: loadSession()?.token,
         onRequest: (r) => setRequests((list) => mergeRequest(list, r)),
+        onStay: () => reload(), // xin / huỷ / hoàn tất trả phòng -> làm mới phòng và hàng chờ
         onStatus: (s) => {
           setLive(s);
           if (s === 'live') reload();
@@ -139,7 +143,7 @@ export default function Layout() {
               Could not reach the API ({error}). Run <code className="font-mono">npm run dev:api</code>.
             </p>
           )}
-          <Outlet context={{ rooms, requests, setRequests, reload }} />
+          <Outlet context={{ rooms, requests, setRequests, checkouts, canCheckout, reload }} />
         </main>
       </div>
     </div>

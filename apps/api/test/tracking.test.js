@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startApi } from './helpers.js';
+import { openSse, startApi } from './helpers.js';
 
 let api;
 before(async () => (api = await startApi()));
@@ -13,49 +13,7 @@ const patch = (path, body, token) =>
     body: JSON.stringify(body),
   });
 
-/** Mở luồng SSE, gom các sự kiện 'request' cho tới khi gọi stop(). */
-async function openStream(path, token) {
-  const controller = new AbortController();
-  const res = await fetch(api.base + path, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
-  assert.equal(res.headers.get('content-type'), 'text/event-stream');
-  const events = [];
-  const waiters = [];
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  (async () => {
-    try {
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx;
-        while ((idx = buffer.indexOf('\n\n')) >= 0) {
-          const chunk = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          const type = /^event: (.+)$/m.exec(chunk)?.[1];
-          const data = /^data: (.+)$/m.exec(chunk)?.[1];
-          if (type) events.push({ type, data: JSON.parse(data) });
-          waiters.splice(0).forEach((w) => w());
-        }
-      }
-    } catch {
-      /* aborted */
-    }
-  })();
-  const waitFor = async (pred, ms = 1000) => {
-    const end = Date.now() + ms;
-    while (!events.some(pred)) {
-      if (Date.now() > end) throw new Error('timed out waiting for event');
-      await new Promise((r) => {
-        waiters.push(r);
-        setTimeout(r, 50);
-      });
-    }
-    return events.find(pred);
-  };
-  return { events, waitFor, stop: () => controller.abort() };
-}
+const openStream = (path, token) => openSse(api.base, path, token);
 
 test('claim -> complete records history and is visible to the guest', async () => {
   const minh = await api.staffToken('HK-04');
