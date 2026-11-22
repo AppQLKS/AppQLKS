@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n.jsx';
 import { Icon } from './ui.jsx';
 
 function Kpi({ label, value, icon, tone, chip }) {
@@ -23,14 +24,15 @@ export default function KpiRow({ rooms, requests }) {
   const food = requests.filter((r) => r.department === 'kitchen' && ['pending', 'in_progress'].includes(r.status)).length;
   const hk = requests.filter((r) => r.department === 'housekeeping' && ['pending', 'in_progress'].includes(r.status));
   const hkActive = hk.filter((r) => r.status === 'in_progress').length;
+  const { t } = useI18n();
 
   return (
-    <section aria-label="Key performance indicators" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 items-stretch gap-gutter-lg">
-      <Kpi label="Occupied Rooms" value={`${occupied}/${rooms.length}`} icon="hotel" tone="bg-emerald-tint text-on-emerald-tint" chip={`${pct}% Occ.`} />
-      <Kpi label="Pending Food Orders" value={food} icon="restaurant_menu" tone="bg-amber-tint text-on-amber-tint" chip="Kitchen Queue" />
-      <Kpi label="Housekeeping Requests" value={hk.length} icon="cleaning_services" tone="bg-blue-tint text-on-blue-tint" chip={`${hkActive} Active`} />
+    <section aria-label={t('kpi.label')} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 items-stretch gap-gutter-lg">
+      <Kpi label={t('kpi.occupied')} value={`${occupied}/${rooms.length}`} icon="hotel" tone="bg-emerald-tint text-on-emerald-tint" chip={t('kpi.occupancy', { pct })} />
+      <Kpi label={t('kpi.food')} value={food} icon="restaurant_menu" tone="bg-amber-tint text-on-amber-tint" chip={t('kpi.kitchenQueue')} />
+      <Kpi label={t('kpi.hk')} value={hk.length} icon="cleaning_services" tone="bg-blue-tint text-on-blue-tint" chip={t('kpi.active', { n: hkActive })} />
       {/* TODO(analytics): tính thời gian phản hồi trung bình từ lịch sử trạng thái */}
-      <Kpi label="Avg. Response Time" value="6 mins" icon="timer" tone="bg-emerald-tint text-on-emerald-tint" chip="-1.4m target" />
+      <Kpi label={t('kpi.response')} value={t('kpi.responseValue')} icon="timer" tone="bg-emerald-tint text-on-emerald-tint" chip={t('kpi.target')} />
     </section>
   );
 }

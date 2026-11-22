@@ -1,22 +1,20 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 import { useStaff } from '../staff.jsx';
-import { Icon, StatusBadge, elapsedLabel, initials } from './ui.jsx';
+import { useI18n } from '../i18n.jsx';
+import { Icon, StatusBadge, initials } from './ui.jsx';
 
 /** Giống quy tắc ở server: bếp chỉ nhận việc bếp, buồng phòng nhận việc buồng phòng. */
 const canClaim = (staff, task) =>
   staff.department === 'manager' || staff.department === 'reception' || staff.department === task.department;
 
-const TABS = [
-  { id: 'all', label: 'All Departments' },
-  { id: 'kitchen', label: 'Kitchen / F&B' },
-  { id: 'housekeeping', label: 'Housekeeping' },
-];
-
-const itemsText = (items) => items.map((i) => (i.qty > 1 ? `${i.qty}x ${i.name}` : i.name)).join(' & ');
+const TABS = ['all', 'kitchen', 'housekeeping'];
+const COLUMNS = ['id', 'room', 'service', 'elapsed', 'staff', 'status'];
 
 export default function TaskQueueTable({ requests, setRequests, reload, initialDept = 'all' }) {
   const { staff } = useStaff();
+  const { t: tr, srv, apiError, elapsed } = useI18n();
+  const itemsText = (items) => items.map((i) => (i.qty > 1 ? `${i.qty}x ${srv(i.name)}` : srv(i.name))).join(' & ');
   const [dept, setDept] = useState(initialDept);
   const [claiming, setClaiming] = useState(null);
   const [error, setError] = useState('');
@@ -30,7 +28,7 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
       const updated = await api(`/requests/${id}/claim`, { method: 'POST' });
       setRequests((list) => list.map((r) => (r.id === id ? updated : r)));
     } catch (e) {
-      setError(`#${id}: ${e.message}`);
+      setError(`#${id}: ${apiError(e)}`);
       if (e.status === 409) reload?.();
     } finally {
       setClaiming(null);
@@ -38,24 +36,24 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
   };
 
   return (
-    <section aria-label="Live Multi-Department Task Queue" className="panel flex flex-col">
+    <section aria-label={tr('queue.section')} className="panel flex flex-col">
       <div className="p-gutter-xl border-b border-outline-variant flex flex-wrap items-center justify-between gap-gutter-md">
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-headline-md">Live Multi-Department Task Queue</h2>
-          <p className="text-body-sm text-on-surface-variant">Claim pending requests to lock ownership and prevent duplicate staff dispatch.</p>
+          <h2 className="text-headline-md">{tr('queue.section')}</h2>
+          <p className="text-body-sm text-on-surface-variant">{tr('queue.hint')}</p>
         </div>
-        <div role="tablist" aria-label="Department filters" className="inline-flex items-center p-1 rounded bg-surface-container border border-outline-variant gap-1">
-          {TABS.map((t) => (
+        <div role="tablist" aria-label={tr('queue.filters')} className="inline-flex items-center p-1 rounded bg-surface-container border border-outline-variant gap-1">
+          {TABS.map((id) => (
             <button
-              key={t.id}
+              key={id}
               role="tab"
-              aria-selected={dept === t.id}
-              onClick={() => setDept(t.id)}
+              aria-selected={dept === id}
+              onClick={() => setDept(id)}
               className={`px-3 py-1.5 rounded-sm text-label-lg transition-colors duration-state-change ${
-                dept === t.id ? 'bg-surface-low text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                dept === id ? 'bg-surface-low text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              {t.label}
+              {tr(`queue.tab.${id}`)}
             </button>
           ))}
         </div>
@@ -71,10 +69,10 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-outline-variant bg-surface text-label-md text-on-surface-variant">
-              {['Request ID', 'Room', 'Service Type & Items', 'Elapsed', 'Assigned Staff', 'Status'].map((h) => (
-                <th key={h} scope="col" className="py-3 px-4 whitespace-nowrap font-medium">{h}</th>
+              {COLUMNS.map((c) => (
+                <th key={c} scope="col" className="py-3 px-4 whitespace-nowrap font-medium">{tr(`queue.col.${c}`)}</th>
               ))}
-              <th scope="col" className="py-3 px-4 text-right whitespace-nowrap font-medium">Action</th>
+              <th scope="col" className="py-3 px-4 text-right whitespace-nowrap font-medium">{tr('queue.col.action')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-outline-variant">
@@ -84,12 +82,12 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
                 <td className="py-3.5 px-4 text-title-md tabular-nums whitespace-nowrap">{t.roomNumber}</td>
                 <td className="py-3.5 px-4">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-body-md">{t.title} · {itemsText(t.items)}</span>
-                    {t.note && <span className="text-body-sm text-on-surface-variant">Note: {t.note}</span>}
+                    <span className="text-body-md">{srv(t.title)} · {itemsText(t.items)}</span>
+                    {t.note && <span className="text-body-sm text-on-surface-variant">{tr('queue.note', { note: t.note })}</span>}
                   </div>
                 </td>
                 <td className="py-3.5 px-4 whitespace-nowrap">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-sm bg-surface-container text-on-surface-variant text-label-sm tabular-nums">{elapsedLabel(t.createdAt)}</span>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-sm bg-surface-container text-on-surface-variant text-label-sm tabular-nums">{elapsed(t.createdAt)}</span>
                 </td>
                 <td className="py-3.5 px-4">
                   {t.assignee ? (
@@ -98,7 +96,7 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
                       <span className="text-body-sm whitespace-nowrap">{t.assignee.name}</span>
                     </div>
                   ) : (
-                    <span className="text-body-sm text-on-surface-variant">Unassigned</span>
+                    <span className="text-body-sm text-on-surface-variant">{tr('queue.unassigned')}</span>
                   )}
                 </td>
                 <td className="py-3.5 px-4 whitespace-nowrap"><StatusBadge status={t.status} /></td>
@@ -108,16 +106,16 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
                       type="button"
                       onClick={() => claim(t.id)}
                       disabled={claiming === t.id || !canClaim(staff, t)}
-                      title={canClaim(staff, t) ? undefined : `Only ${t.department} staff can claim this`}
+                      title={canClaim(staff, t) ? undefined : tr('queue.onlyDept', { dept: tr(`dept.${t.department}`) })}
                       className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-primary text-on-primary hover:bg-on-blue-tint disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-state-change whitespace-nowrap"
                     >
                       <Icon name="lock" className="text-[15px]" />
-                      <span className="text-label-lg">{claiming === t.id ? 'Claiming…' : 'Claim Task'}</span>
+                      <span className="text-label-lg">{claiming === t.id ? tr('queue.claiming') : tr('queue.claim')}</span>
                     </button>
                   ) : (
                     <button type="button" disabled className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded bg-surface-container text-on-surface-variant border border-outline-variant cursor-not-allowed whitespace-nowrap">
                       <Icon name="verified_user" className="text-[15px]" />
-                      <span className="text-label-lg">{t.status === 'completed' ? 'Done' : 'Locked'}</span>
+                      <span className="text-label-lg">{t.status === 'completed' ? tr('queue.done') : tr('queue.locked')}</span>
                     </button>
                   )}
                 </td>
@@ -125,7 +123,7 @@ export default function TaskQueueTable({ requests, setRequests, reload, initialD
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-6 px-4 text-center text-body-sm text-on-surface-variant">No requests.</td>
+                <td colSpan={7} className="py-6 px-4 text-center text-body-sm text-on-surface-variant">{tr('queue.empty')}</td>
               </tr>
             )}
           </tbody>

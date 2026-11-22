@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/ui.jsx';
+import { LanguageSwitch, useI18n } from '../i18n.jsx';
 import { useStaff } from '../staff.jsx';
+
+// Lỗi từ server (tiếng Anh) -> key bản dịch theo mã HTTP
+const ERROR_KEYS = { 400: 'login.error.missing', 401: 'login.error.invalid', 429: 'error.429' };
 
 export default function Login() {
   const { session, login, expired } = useStaff();
@@ -12,6 +16,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useI18n();
 
   if (session?.token && !busy) return <Navigate to="/rooms" replace />;
 
@@ -23,7 +28,8 @@ export default function Login() {
       await login(id, password);
       navigate(location.state?.from ?? '/rooms', { replace: true });
     } catch (err) {
-      setError(err.message);
+      // Lưu key để đổi ngôn ngữ thì thông báo lỗi đổi theo
+      setError(ERROR_KEYS[err.status] ?? (err.status ? err.message : 'error.network'));
       setBusy(false);
     }
   };
@@ -31,43 +37,46 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-sidebar-surface px-4">
       <div className="w-full max-w-sm flex flex-col gap-section">
-        <div className="flex items-center gap-gutter-md text-on-brand-slate">
-          <div className="w-10 h-10 rounded bg-primary flex items-center justify-center shrink-0">
-            <Icon name="apartment" className="text-[22px] text-on-primary" />
+        <div className="flex items-center justify-between gap-gutter-md">
+          <div className="flex items-center gap-gutter-md text-on-brand-slate">
+            <div className="w-10 h-10 rounded bg-primary flex items-center justify-center shrink-0">
+              <Icon name="apartment" className="text-[22px] text-on-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-title-md">AppHotel</span>
+              <span className="text-label-sm text-sidebar-muted">{t('brand.portal')}</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-title-md">AppHotel</span>
-            <span className="text-label-sm text-sidebar-muted">Admin &amp; Staff Portal</span>
-          </div>
+          <LanguageSwitch dark />
         </div>
 
         <form onSubmit={submit} className="panel p-gutter-xl flex flex-col gap-gutter-lg">
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-headline-lg">Sign in to your shift</h1>
-            <p className="text-body-sm text-on-surface-variant">Reception, kitchen, housekeeping and managers.</p>
+            <h1 className="text-headline-lg">{t('login.title')}</h1>
+            <p className="text-body-sm text-on-surface-variant">{t('login.subtitle')}</p>
           </div>
 
           {(error || expired) && (
             <p role="alert" className="flex items-start gap-2 p-gutter-md rounded bg-error-tint text-on-error-tint text-body-sm">
               <Icon name="error" className="text-[18px] shrink-0" />
-              {error || 'Your session ended. Please sign in again.'}
+              {error ? t(error) : t('login.expired')}
             </p>
           )}
 
           <label className="flex flex-col gap-1">
-            <span className="text-label-md">Staff ID or Email</span>
+            <span className="text-label-md">{t('login.id')}</span>
             <input
               value={id}
               onChange={(e) => setId(e.target.value)}
               required
               autoFocus
               autoComplete="username"
-              placeholder="e.g., RC-01 or maya@apphotel.vn"
+              placeholder={t('login.idPlaceholder')}
               className="w-full rounded border-outline bg-surface text-body-md focus:border-primary focus:ring-primary"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-label-md">Password</span>
+            <span className="text-label-md">{t('login.password')}</span>
             <div className="relative flex items-center">
               <input
                 type={showPwd ? 'text' : 'password'}
@@ -80,7 +89,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
-                aria-label={showPwd ? 'Hide password' : 'Show password'}
+                aria-label={showPwd ? t('login.hidePassword') : t('login.showPassword')}
                 className="absolute right-1 w-8 h-8 inline-flex items-center justify-center rounded text-on-surface-variant hover:text-on-surface"
               >
                 <Icon name={showPwd ? 'visibility_off' : 'visibility'} className="text-[18px]" />
@@ -94,10 +103,10 @@ export default function Login() {
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-primary text-on-primary hover:bg-on-blue-tint disabled:opacity-60 transition-colors duration-state-change"
           >
             <Icon name="login" className="text-[18px]" />
-            <span className="text-label-lg">{busy ? 'Signing in…' : 'Sign In'}</span>
+            <span className="text-label-lg">{busy ? t('login.busy') : t('login.submit')}</span>
           </button>
         </form>
-        <p className="text-center text-label-md text-sidebar-muted">Forgot your password? Contact your manager.</p>
+        <p className="text-center text-label-md text-sidebar-muted">{t('login.forgot')}</p>
       </div>
     </div>
   );
