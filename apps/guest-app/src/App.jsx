@@ -17,10 +17,10 @@ import { RequireStaff } from './staffAuth.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 const GUEST_NAV = [
-  { to: '/home', label: 'Home', icon: 'home' },
-  { to: '/dining', label: 'Dining', icon: 'room_service' },
-  { to: '/housekeeping', label: 'Suite Care', icon: 'cleaning_services' },
-  { to: '/concierge', label: 'Concierge', icon: 'auto_awesome' },
+  { to: '/home', label: 'nav.home', icon: 'home' },
+  { to: '/dining', label: 'nav.dining', icon: 'room_service' },
+  { to: '/housekeeping', label: 'nav.suiteCare', icon: 'cleaning_services' },
+  { to: '/concierge', label: 'nav.concierge', icon: 'auto_awesome' },
 ];
 
 export default function App() {
@@ -42,7 +42,7 @@ export default function App() {
       <Route path="/staff/rooms" element={<RequireStaff><ReceptionRooms /></RequireStaff>} />
       <Route path="/staff/profile" element={<RequireStaff><ShiftProfile /></RequireStaff>} />
 
-      <Route path="*" element={<Placeholder title="Page not found" />} />
+      <Route path="*" element={<Placeholder titleKey="common.notFound" />} />
     </Routes>
   );
 }

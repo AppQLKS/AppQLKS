@@ -3,15 +3,18 @@ import { loadSession, staffApi } from '../../api.js';
 import { BottomNav, Icon, formatCode, money } from '../../components/ui.jsx';
 import { subscribeRequests } from '../../live.js';
 import { useStaffAuth } from '../../staffAuth.jsx';
+import { useI18n } from '../../i18n.jsx';
 import { STAFF_NAV } from './staffNav.js';
 
 const TILE = {
-  vacant: { box: 'bg-surface-container-low border border-outline-variant', num: 'text-on-surface', label: 'text-on-surface-variant', text: 'Vacant' },
-  occupied: { box: 'bg-success-container/60 border border-success/30', num: 'text-on-success-container', label: 'text-on-success-container', text: 'Occupied' },
-  cleaning: { box: 'bg-secondary-container/80 border border-accent', num: 'text-on-secondary-container', label: 'text-on-secondary-container', text: 'Cleaning' },
+  vacant: { box: 'bg-surface-container-low border border-outline-variant', num: 'text-on-surface', label: 'text-on-surface-variant', text: 'rooms.tile.vacant' },
+  occupied: { box: 'bg-success-container/60 border border-success/30', num: 'text-on-success-container', label: 'text-on-success-container', text: 'rooms.tile.occupied' },
+  cleaning: { box: 'bg-secondary-container/80 border border-accent', num: 'text-on-secondary-container', label: 'text-on-secondary-container', text: 'rooms.tile.cleaning' },
 };
 
 export default function ReceptionRooms() {
+  // tr thay vì t vì bên dưới dùng biến t cho kiểu ô phòng
+  const { t: tr } = useI18n();
   const { staff, logout } = useStaffAuth();
   const isFrontDesk = ['reception', 'manager'].includes(staff.department);
   const [rooms, setRooms] = useState([]);
@@ -78,16 +81,16 @@ export default function ReceptionRooms() {
 
   // "Revoke" = sinh mã mới: mã cũ và mọi điện thoại đang đăng nhập bằng mã cũ mất hiệu lực
   const revoke = () => {
-    if (!window.confirm(`Revoke the door code for Room ${selected}? Guests will need the new code to sign in again.`)) return;
-    run('revoke', () => staffApi(`/rooms/${selected}/code`, { method: 'POST' }), `Room ${selected}: new door code issued.`);
+    if (!window.confirm(tr('rooms.confirmRevoke', { n: selected }))) return;
+    run('revoke', () => staffApi(`/rooms/${selected}/code`, { method: 'POST' }), tr('rooms.revoked', { n: selected }));
   };
 
   const checkOut = (roomNumber, guestName, total) => {
-    if (!window.confirm(`Check out Room ${roomNumber} (${guestName}) and deactivate the door code?\nBalance: ${money(total)}`)) return;
+    if (!window.confirm(tr('rooms.confirmCheckout', { n: roomNumber, name: guestName, x: money(total) }))) return;
     run(
       `checkout:${roomNumber}`,
       () => staffApi(`/checkout/${roomNumber}/approve`, { method: 'POST' }),
-      `Room ${roomNumber} checked out. Turnover cleaning sent to housekeeping.`,
+      tr('rooms.checkedOut', { n: roomNumber }),
     );
   };
 
@@ -95,13 +98,13 @@ export default function ReceptionRooms() {
     <div className="min-h-screen max-w-[390px] mx-auto flex flex-col pb-24">
       <header className="px-page-margin pt-2xl pb-md flex items-center justify-between gap-sm">
         <div className="flex flex-col gap-xs">
-          <h1 className="font-headline text-headline-lg">Reception Desk</h1>
-          <p className="text-body-sm text-on-surface-variant tabular-nums">Boutique Hotel • {occupied}/{rooms.length} Occupied</p>
+          <h1 className="font-headline text-headline-lg">{tr('rooms.title')}</h1>
+          <p className="text-body-sm text-on-surface-variant tabular-nums">{tr('rooms.subtitle', { a: occupied, b: rooms.length })}</p>
         </div>
         {/* TODO(sau MVP): nhận phòng mới (check-in) và sinh mã cửa */}
-        <button type="button" disabled title="Coming soon" className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-primary text-on-primary font-label text-label-md opacity-50 shrink-0">
+        <button type="button" disabled title={tr('rooms.comingSoon')} className="inline-flex items-center gap-xs px-md py-sm rounded-full bg-primary text-on-primary font-label text-label-md opacity-50 shrink-0">
           <Icon name="add" className="text-title-md" />
-          Check-in
+          {tr('rooms.checkin')}
         </button>
       </header>
 
@@ -118,13 +121,13 @@ export default function ReceptionRooms() {
             <div className="flex items-start gap-sm">
               <Icon name="notifications_active" className="text-title-lg text-secondary shrink-0" />
               <div className="flex flex-col gap-xs">
-                <span className="font-label text-label-sm text-on-secondary-container uppercase tracking-wider">Express Checkout Request • Room {c.roomNumber}</span>
-                <p className="font-title text-title-sm text-on-secondary-container tabular-nums">Total Room Service Bill: {money(c.folio.total)}</p>
+                <span className="font-label text-label-sm text-on-secondary-container uppercase tracking-wider">{tr('rooms.checkoutRequest', { n: c.roomNumber })}</span>
+                <p className="font-title text-title-sm text-on-secondary-container tabular-nums">{tr('rooms.bill', { x: money(c.folio.total) })}</p>
               </div>
             </div>
             <div className="flex items-center gap-sm">
               <button type="button" onClick={() => setSelected(c.roomNumber)} className="px-md py-sm rounded-md bg-surface-container-lowest border border-outline-variant font-label text-label-sm hover:bg-surface-container-low transition-colors duration-state-change">
-                Review Bill
+                {tr('rooms.reviewBill')}
               </button>
               <button
                 type="button"
@@ -132,7 +135,7 @@ export default function ReceptionRooms() {
                 disabled={!!busy}
                 className="flex-1 px-md py-sm rounded-md bg-primary text-on-primary font-label text-label-sm hover:opacity-95 disabled:opacity-60 transition duration-state-change"
               >
-                {busy === `checkout:${c.roomNumber}` ? 'Checking out…' : 'Approve & Revoke Code'}
+                {busy === `checkout:${c.roomNumber}` ? tr('rooms.checkingOut') : tr('rooms.approve')}
               </button>
             </div>
           </article>
@@ -140,8 +143,8 @@ export default function ReceptionRooms() {
 
         <section aria-labelledby="room-grid-heading" className="flex flex-col gap-sm">
           <div className="flex items-center justify-between">
-            <h2 id="room-grid-heading" className="font-title text-title-md">Floor Status</h2>
-            <span className="text-body-sm text-on-surface-variant">Tap a room</span>
+            <h2 id="room-grid-heading" className="font-title text-title-md">{tr('rooms.floorStatus')}</h2>
+            <span className="text-body-sm text-on-surface-variant">{tr('rooms.tapRoom')}</span>
           </div>
           <div className="grid grid-cols-3 gap-sm items-stretch">
             {rooms.map((r) => {
@@ -157,8 +160,8 @@ export default function ReceptionRooms() {
                     isSel ? 'bg-surface-container-lowest border-2 border-primary shadow-sm' : `${t.box} hover:border-primary`
                   }`}
                 >
-                  <span className={`font-mono text-mono-sm ${isSel ? 'text-primary font-semibold' : t.num}`}>Room {r.number}</span>
-                  <span className={`font-label text-label-sm ${isSel || r.checkoutRequested ? 'text-secondary' : t.label}`}>{r.checkoutRequested ? 'Checkout Pending' : t.text}</span>
+                  <span className={`font-mono text-mono-sm ${isSel ? 'text-primary font-semibold' : t.num}`}>{tr('common.room', { n: r.number })}</span>
+                  <span className={`font-label text-label-sm ${isSel || r.checkoutRequested ? 'text-secondary' : t.label}`}>{r.checkoutRequested ? tr('rooms.tile.checkoutPending') : tr(t.text)}</span>
                 </button>
               );
             })}
@@ -169,7 +172,7 @@ export default function ReceptionRooms() {
           <section aria-labelledby="selected-room-heading">
             <article className="card !shadow-md !border-outline-variant p-lg flex flex-col gap-md">
               <h2 id="selected-room-heading" className="font-title text-title-md">
-                Room {detail.number} • {detail.stay ? 'Active Stay Session' : TILE[detail.status].text}
+                {tr('common.room', { n: detail.number })} • {detail.stay ? tr('rooms.activeSession') : tr(TILE[detail.status].text)}
               </h2>
               {detail.stay ? (
                 <>
@@ -178,20 +181,20 @@ export default function ReceptionRooms() {
                     <div className="flex items-center justify-between gap-sm p-md rounded-md bg-surface-container-low border border-outline-variant/80">
                       <div className="flex items-center gap-sm">
                         <span className="font-mono text-mono-lg tracking-wider">{code}</span>
-                        <button type="button" onClick={copy} aria-label={`Copy room code ${code}`} className="inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-colors duration-state-change">
+                        <button type="button" onClick={copy} aria-label={tr('rooms.copyCode', { code })} className="inline-flex items-center justify-center w-8 h-8 rounded-md text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-colors duration-state-change">
                           <Icon name={copied ? 'check' : 'content_copy'} className="text-title-md" />
                         </button>
                       </div>
                       <button type="button" disabled={!!busy} onClick={revoke} className="px-md py-xs rounded-md border border-error text-error font-label text-label-sm hover:bg-error-container/40 disabled:opacity-60 transition-colors duration-state-change">
-                        {busy === 'revoke' ? 'Revoking…' : 'Revoke Code'}
+                        {busy === 'revoke' ? tr('rooms.revoking') : tr('rooms.revoke')}
                       </button>
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-md pt-xs border-t border-outline-variant/60">
                     <div className="flex flex-col">
-                      <span className="text-body-sm text-on-surface-variant">Room Service</span>
+                      <span className="text-body-sm text-on-surface-variant">{tr('rooms.roomService')}</span>
                       <span className="font-title text-title-sm tabular-nums">
-                        {detail.folio.lines.length} Items • {money(detail.folio.total)}
+                        {tr('rooms.itemsTotal', { n: detail.folio.lines.length, x: money(detail.folio.total) })}
                       </span>
                     </div>
                     {isFrontDesk && (
@@ -201,13 +204,13 @@ export default function ReceptionRooms() {
                         onClick={() => checkOut(detail.number, detail.stay.guestName, detail.folio.total)}
                         className="btn-primary px-lg py-md !text-label-md"
                       >
-                        {busy === `checkout:${detail.number}` ? 'Checking out…' : 'Complete Check-out'}
+                        {busy === `checkout:${detail.number}` ? tr('rooms.checkingOut') : tr('rooms.completeCheckout')}
                       </button>
                     )}
                   </div>
                 </>
               ) : (
-                <p className="text-body-sm text-on-surface-variant">No active stay in this room.</p>
+                <p className="text-body-sm text-on-surface-variant">{tr('rooms.noStay')}</p>
               )}
             </article>
           </section>

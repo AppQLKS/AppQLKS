@@ -3,16 +3,11 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
 import { BackButton, Icon, money } from '../../components/ui.jsx';
+import { useI18n } from '../../i18n.jsx';
 
-const SUGGESTIONS = ['What time is breakfast?', 'Things to do nearby', 'Order an iced coffee', 'Extra towels please'];
+const SUGGESTIONS = ['chat.suggest1', 'chat.suggest2', 'chat.suggest3', 'chat.suggest4'];
 
-const ACTION_UI = {
-  food_order: { icon: 'room_service', title: 'Kitchen Order Ready', ask: 'Confirm Order', done: 'Order Confirmed • Sent to Kitchen' },
-  housekeeping: { icon: 'cleaning_services', title: 'Housekeeping Request', ask: 'Confirm Request', done: 'Request Sent • Housekeeping Notified' },
-  checkout: { icon: 'logout', title: 'Express Check-out', ask: 'Request Check-out', done: 'Check-out Requested • Waiting for Reception' },
-};
-
-const timeOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const ACTION_ICON = { food_order: 'room_service', housekeeping: 'cleaning_services', checkout: 'logout' };
 
 /** Hiển thị **đậm** và xuống dòng trong câu trả lời của chatbot. */
 function RichText({ text }) {
@@ -25,7 +20,8 @@ function RichText({ text }) {
 
 /** Thẻ xác nhận cho thao tác chatbot đã chuẩn bị (tool calling). */
 function ActionCard({ action, roomNumber, onChange }) {
-  const ui = ACTION_UI[action.kind];
+  const { t } = useI18n();
+  const k = `chat.action.${action.kind}`;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,14 +41,14 @@ function ActionCard({ action, roomNumber, onChange }) {
     <article className={`w-full card p-lg flex flex-col gap-md ${action.status === 'pending' ? '!border-accent' : ''}`}>
       <header className="flex items-center justify-between gap-sm">
         <div className="flex items-center gap-xs">
-          <Icon name={ui.icon} className="text-title-md text-secondary" />
-          <span className="font-label text-label-md text-secondary uppercase tracking-wider">{ui.title}</span>
+          <Icon name={ACTION_ICON[action.kind]} className="text-title-md text-secondary" />
+          <span className="font-label text-label-md text-secondary uppercase tracking-wider">{t(`${k}.title`)}</span>
         </div>
         {action.total !== null && <span className="font-mono text-mono-sm tabular-nums">{money(action.total)}</span>}
       </header>
       <p className="font-title text-title-sm text-pretty">
-        {ui.ask}: {action.summary}
-        {action.kind !== 'checkout' && ` to Room ${roomNumber}`}?
+        {t(`${k}.ask`)}: {action.summary}
+        {action.kind !== 'checkout' && ` ${t('chat.toRoom', { n: roomNumber })}`}?
       </p>
 
       {error && <p role="alert" className="text-body-sm text-error">{error}</p>}
@@ -60,7 +56,7 @@ function ActionCard({ action, roomNumber, onChange }) {
       {action.status === 'pending' && (
         <footer className="flex items-center gap-sm pt-xs">
           <button type="button" onClick={() => act('confirm')} disabled={busy} className="btn-primary flex-1 py-sm px-lg !text-label-md">
-            {busy ? 'Sending…' : 'Confirm'}
+            {busy ? t('common.sending') : t('chat.confirm')}
           </button>
           <button
             type="button"
@@ -68,7 +64,7 @@ function ActionCard({ action, roomNumber, onChange }) {
             disabled={busy}
             className="py-sm px-lg rounded-md bg-surface-container-low border border-outline-variant font-label text-label-md hover:bg-surface-container transition-colors duration-state-change"
           >
-            Edit
+            {t('chat.edit')}
           </button>
         </footer>
       )}
@@ -76,19 +72,20 @@ function ActionCard({ action, roomNumber, onChange }) {
         <div className="w-full py-sm px-md rounded-md bg-success-container text-on-success-container font-label text-label-md flex items-center justify-center gap-xs text-center">
           <Icon name="check_circle" className="text-title-md shrink-0" />
           <span>
-            {ui.done}
+            {t(`${k}.done`)}
             {action.result?.requestId && ` (#${action.result.requestId})`}
           </span>
         </div>
       )}
-      {action.status === 'dismissed' && <p className="text-body-sm text-on-surface-variant">Not sent. Tell me what you would like to change.</p>}
-      {action.status === 'failed' && <p className="text-body-sm text-error">Could not send: {action.result?.error}</p>}
+      {action.status === 'dismissed' && <p className="text-body-sm text-on-surface-variant">{t('chat.dismissed')}</p>}
+      {action.status === 'failed' && <p className="text-body-sm text-error">{t('chat.failed', { error: action.result?.error })}</p>}
     </article>
   );
 }
 
 export default function Concierge() {
   const { room, guest } = useAuth().session;
+  const { t, fmtTime: timeOf } = useI18n();
   const [messages, setMessages] = useState([]);
   const [enabled, setEnabled] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -152,13 +149,13 @@ export default function Concierge() {
               <Icon name="auto_awesome" className="text-title-md text-secondary" />
             </div>
             <div className="flex flex-col">
-              <h1 className="font-headline text-title-lg">AI Concierge</h1>
-              <span className="text-body-sm text-on-surface-variant">Room {room.number} • {enabled ? 'Online' : 'Offline'}</span>
+              <h1 className="font-headline text-title-lg">{t('chat.title')}</h1>
+              <span className="text-body-sm text-on-surface-variant">{t('common.room', { n: room.number })} • {enabled ? t('chat.online') : t('chat.offline')}</span>
             </div>
           </div>
         </div>
         {messages.length > 0 ? (
-          <button type="button" onClick={newChat} aria-label="Start a new chat" title="New chat" className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface">
+          <button type="button" onClick={newChat} aria-label={t('chat.newChat')} title={t('chat.newChatShort')} className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface">
             <Icon name="edit_square" className="text-title-md" />
           </button>
         ) : (
@@ -171,13 +168,13 @@ export default function Concierge() {
           <div className="flex flex-col items-start gap-md">
             <div className="max-w-[88%] card !rounded-bl-sm px-lg py-md">
               <p className="text-body-md text-pretty">
-                Hi {guest.name.split(' ')[0]}! I can answer questions about breakfast, the spa or things to see nearby, and I can order room service or arrange housekeeping for you.
+                {t('chat.welcome', { name: guest.name.split(' ')[0] })}
               </p>
             </div>
             <div className="flex flex-wrap gap-sm">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" disabled={!enabled} onClick={() => send(s)} className="pill pill-idle disabled:opacity-50">
-                  {s}
+                <button key={s} type="button" disabled={!enabled} onClick={() => send(t(s))} className="pill pill-idle disabled:opacity-50">
+                  {t(s)}
                 </button>
               ))}
             </div>
@@ -208,7 +205,7 @@ export default function Concierge() {
         )}
 
         {thinking && (
-          <div className="card !rounded-bl-sm px-lg py-md self-start flex items-center gap-xs" role="status" aria-label="Concierge is typing">
+          <div className="card !rounded-bl-sm px-lg py-md self-start flex items-center gap-xs" role="status" aria-label={t('chat.typing')}>
             {[0, 1, 2].map((d) => (
               <span key={d} className="w-2 h-2 rounded-full bg-outline animate-bounce" style={{ animationDelay: `${d * 150}ms` }} />
             ))}
@@ -224,9 +221,17 @@ export default function Concierge() {
 
         {!enabled && loaded && (
           <p className="text-body-sm text-on-surface-variant text-center">
-            The AI concierge is offline. You can still use{' '}
-            <Link to="/dining" className="text-primary font-semibold">Dining</Link>,{' '}
-            <Link to="/housekeeping" className="text-primary font-semibold">Housekeeping</Link> or dial 0 for reception.
+            {t('chat.offlineNote', { dining: '@@DINING@@', housekeeping: '@@HK@@' })
+              .split(/(@@DINING@@|@@HK@@)/)
+              .map((part, i) =>
+                part === '@@DINING@@' ? (
+                  <Link key={i} to="/dining" className="text-primary font-semibold">{t('nav.dining')}</Link>
+                ) : part === '@@HK@@' ? (
+                  <Link key={i} to="/housekeeping" className="text-primary font-semibold">{t('nav.suiteCare')}</Link>
+                ) : (
+                  part
+                ),
+              )}
           </p>
         )}
         <div ref={bottomRef} />
@@ -237,7 +242,7 @@ export default function Concierge() {
           e.preventDefault();
           send(draft);
         }}
-        aria-label="Chat composer"
+        aria-label={t('chat.composer')}
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-surface-container-lowest border-t border-outline-variant px-page-margin py-md z-20 flex items-center gap-sm"
       >
         <input
@@ -246,14 +251,14 @@ export default function Concierge() {
           onChange={(e) => setDraft(e.target.value)}
           maxLength={1000}
           disabled={!enabled}
-          aria-label="Message AI Concierge"
-          placeholder={enabled ? 'Ask about attractions, spa, or dining...' : 'Concierge offline'}
+          aria-label={t('chat.inputAria')}
+          placeholder={enabled ? t('chat.placeholder') : t('chat.placeholderOffline')}
           className="flex-1 px-lg py-md rounded-full bg-surface-container-low border border-outline-variant text-body-md placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60"
         />
         <button
           type="submit"
           disabled={!enabled || thinking || !draft.trim()}
-          aria-label="Send message"
+          aria-label={t('chat.send')}
           className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-50 transition duration-state-change shrink-0"
         >
           <Icon name="send" className="text-title-md" />

@@ -1,4 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useI18n } from '../i18n.jsx';
 
 export function Icon({ name, className = '', filled = false }) {
   return (
@@ -29,12 +30,13 @@ export function Screen({ children, className = '' }) {
   return <div className={`min-h-screen max-w-[390px] mx-auto flex flex-col ${className}`}>{children}</div>;
 }
 
-export function BackButton({ to, label = 'Back to Home' }) {
+export function BackButton({ to, label }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   return (
     <button
       type="button"
-      aria-label={label}
+      aria-label={label ?? t('common.backHome')}
       onClick={() => (to ? navigate(to) : navigate(-1))}
       className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-lowest text-on-surface border border-outline-variant hover:bg-surface-container-low transition-colors duration-state-change shrink-0"
     >
@@ -99,6 +101,7 @@ export function StepBar({ steps, current, height = 'h-1.5' }) {
 
 /** Thanh điều hướng đáy. items: [{ to, label, icon }] */
 export function BottomNav({ items }) {
+  const { t } = useI18n();
   return (
     <nav
       aria-label="Primary"
@@ -118,7 +121,7 @@ export function BottomNav({ items }) {
             {({ isActive }) => (
               <>
                 <Icon name={it.icon} filled={isActive} className="text-headline-md" />
-                <span className="font-label text-label-sm">{it.label}</span>
+                <span className="font-label text-label-sm">{t(it.label)}</span>
               </>
             )}
           </NavLink>
