@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { dishDescriptionVi, en, serverTextVi, vi } from './locales.js';
+import { dishDescriptionVi, en, serverErrorPatternsVi, serverTextVi, vi } from './locales.js';
 
 // Đa ngôn ngữ cho app khách: 'en' | 'vi'.
 // Thêm màn hình mới: thêm key vào cả hai từ điển rồi dùng t('key') trong component.
@@ -62,7 +62,14 @@ export function I18nProvider({ children }) {
     };
     /** Mô tả món ăn theo ngôn ngữ. */
     const dishDesc = (item) => (lang === 'vi' && dishDescriptionVi[item.id]) || item.description;
-    return { lang, setLang, t, locale, fmtTime, fmtDate, srv, dishDesc };
+    /** Lỗi từ API (server trả tiếng Anh): mất mạng -> câu báo chung; tiếng Việt -> dịch theo mẫu nếu có. */
+    const apiError = (e) => {
+      if (!e?.status) return t('login.error.network');
+      if (lang !== 'vi') return e.message;
+      const hit = serverErrorPatternsVi.find(([pattern]) => pattern.test(e.message));
+      return hit ? e.message.replace(hit[0], hit[1]) : e.message;
+    };
+    return { lang, setLang, t, locale, fmtTime, fmtDate, srv, dishDesc, apiError };
   }, [lang, setLang]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

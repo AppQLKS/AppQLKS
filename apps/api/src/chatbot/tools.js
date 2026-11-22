@@ -1,4 +1,4 @@
-import { db, folioForRoom, presentRequest } from '../data/store.js';
+import { db, folioForStay, presentRequest, requestsOfStay } from '../data/store.js';
 import { HOTEL_INFO_TOPICS, hotelInfo } from '../data/hotelInfo.js';
 import { AMENITIES, SLOTS } from '../services/housekeeping.js';
 import { checkoutStatus } from '../services/checkout.js';
@@ -113,8 +113,7 @@ const READERS = {
       .map(({ id, name, description, price, prepMinutes, category: c }) => ({ menu_id: id, name, description, price, prepMinutes, category: c })),
 
   get_my_requests: (stay) =>
-    db.requests
-      .filter((r) => r.roomNumber === stay.roomNumber)
+    requestsOfStay(stay)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 10)
       .map((r) => {
@@ -122,7 +121,7 @@ const READERS = {
         return { id: p.id, title: p.title, items: p.items.map((i) => `${i.qty}x ${i.name}`), status: p.status, assignedTo: p.assignee?.name ?? null, createdAt: p.createdAt };
       }),
 
-  get_folio: (stay) => folioForRoom(stay.roomNumber),
+  get_folio: (stay) => folioForStay(stay),
 };
 
 /**

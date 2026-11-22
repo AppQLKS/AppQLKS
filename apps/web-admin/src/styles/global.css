@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Luôn chừa chỗ cho thanh cuộn: trang dài / ngắn không làm nội dung xê dịch khi chuyển tab */
+html {
+  scrollbar-gutter: stable;
+}
+
 .material-symbols-outlined {
   display: inline-block;
   width: 1em;

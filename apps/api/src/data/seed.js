@@ -89,7 +89,7 @@ export function seed() {
    */
   const requests = [
     { id: 'REQ-412', roomNumber: '204', type: 'food', title: 'Room Service', items: [{ name: 'Truffle Wagyu Burger', qty: 1, price: 28 }, { name: 'Sparkling Mineral Water', qty: 1, price: 7 }], note: 'Medium-rare, no caramelized onions', status: 'pending', assignedTo: null, createdAt: minutesAgo(4) },
-    { id: 'REQ-411', roomNumber: '105', type: 'housekeeping', title: 'Turnover Cleaning', items: [{ name: 'Full Linen & Bath Reset', qty: 1 }], note: 'Next check-in scheduled at 21:00', status: 'pending', assignedTo: null, createdAt: minutesAgo(7) },
+    { id: 'REQ-411', roomNumber: '105', type: 'housekeeping', kind: 'turnover', title: 'Turnover Cleaning', items: [{ name: 'Full Linen & Bath Reset', qty: 1 }], note: 'Next check-in scheduled at 21:00', status: 'pending', assignedTo: null, createdAt: minutesAgo(7) },
     { id: 'REQ-410', roomNumber: '302', type: 'food', title: 'F&B Order', items: [{ name: 'Grilled Salmon Bowl', qty: 1, price: 27 }, { name: 'Herbal Tea', qty: 1, price: 5 }], note: 'Dressing on the side, allergy: sesame', status: 'in_progress', assignedTo: 'KT-02', createdAt: minutesAgo(11) },
     { id: 'REQ-409', roomNumber: '202', type: 'amenity', title: 'Amenity Request', items: [{ name: 'Hypoallergenic Pillows', qty: 2 }, { name: 'Towels', qty: 2 }], note: 'Deliver quietly, baby sleeping', status: 'pending', assignedTo: null, createdAt: minutesAgo(14) },
     { id: 'REQ-408', roomNumber: '107', type: 'food', title: 'Beverage Bar', items: [{ name: 'Sparkling Sake Carafe', qty: 1, price: 32 }, { name: 'Edamame', qty: 1, price: 6 }], note: 'Include 2 chilled glasses', status: 'in_progress', assignedTo: 'KT-02', createdAt: minutesAgo(19) },

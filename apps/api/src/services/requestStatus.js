@@ -1,5 +1,6 @@
 import { departmentOf, findStaff, setRequestStatus } from '../data/store.js';
 import { HttpError } from '../middleware/errors.js';
+import { markRoomReady } from './rooms.js';
 
 const SUPERVISORS = ['reception', 'manager'];
 const isSupervisor = (staff) => SUPERVISORS.includes(staff.department);
@@ -30,7 +31,10 @@ export function updateRequestStatus(request, staff, { status, reason } = {}) {
     case 'completed':
       if (request.status !== 'in_progress') throw new HttpError(409, 'Only a task in progress can be completed.');
       if (!owner && !isSupervisor(staff)) throw new HttpError(403, 'Only the assigned staff member can complete this task.');
-      return setRequestStatus(request, 'completed', { by: staff.id });
+      setRequestStatus(request, 'completed', { by: staff.id });
+      // Dọn phòng sau trả phòng xong -> phòng về Trống, lễ tân nhận khách mới được
+      if (request.kind === 'turnover') markRoomReady(request.roomNumber, staff, { auto: true });
+      return request;
 
     case 'pending':
       if (request.status !== 'in_progress') throw new HttpError(409, 'Only a task in progress can be released.');

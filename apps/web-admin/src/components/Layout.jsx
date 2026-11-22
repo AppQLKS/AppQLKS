@@ -59,8 +59,9 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-surface">
-      <aside className="w-full lg:w-72 shrink-0 bg-sidebar-surface text-on-brand-slate flex flex-col justify-between lg:min-h-screen border-b lg:border-b-0 lg:border-r border-sidebar-active">
-        <div className="p-gutter-xl flex flex-col gap-section">
+      {/* Sidebar cố định cao bằng màn hình: nút đăng xuất luôn ở đáy, dù trang dài hay ngắn */}
+      <aside className="w-full lg:w-72 shrink-0 bg-sidebar-surface text-on-brand-slate flex flex-col justify-between lg:sticky lg:top-0 lg:h-screen border-b lg:border-b-0 lg:border-r border-sidebar-active">
+        <div className="p-gutter-xl flex flex-col gap-section min-h-0 lg:overflow-y-auto">
           <div className="flex items-center gap-gutter-md">
             <div className="w-9 h-9 rounded bg-primary flex items-center justify-center shrink-0">
               <Icon name="apartment" className="text-[20px] text-on-primary" />
@@ -101,7 +102,7 @@ export default function Layout() {
           </nav>
         </div>
 
-        <div className="p-gutter-xl border-t border-sidebar-active hidden lg:flex items-center gap-gutter-md">
+        <div className="p-gutter-xl border-t border-sidebar-active flex items-center shrink-0 gap-gutter-md">
           <div className="w-9 h-9 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-md shrink-0">{initials(staff.name)}</div>
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-label-lg truncate">{staff.name}</span>
@@ -130,7 +131,7 @@ export default function Layout() {
               })}
             </p>
           </div>
-          <div className="flex items-center gap-gutter-md">
+          <div className="flex items-center gap-gutter-md shrink-0">
             <LanguageSwitch />
             <span role="status" className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${syncOk ? 'bg-emerald-tint text-on-emerald-tint' : 'bg-amber-tint text-on-amber-tint'}`}>
               <span className={`w-2 h-2 rounded-full ${syncOk ? 'bg-status-emerald' : 'bg-status-amber'}`} aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { en, serverErrorVi, serverTextVi, vi } from './locales.js';
+import { en, serverErrorPatternsVi, serverErrorVi, serverTextVi, vi } from './locales.js';
 
 // Đa ngôn ngữ cho web admin: 'en' | 'vi'.
 // Dùng chung key localStorage với app khách để cùng trình duyệt thì cùng ngôn ngữ.
@@ -64,8 +64,9 @@ export function I18nProvider({ children }) {
       if (!e?.status) return t('error.network');
       if (lang !== 'vi') return e.message;
       if (serverErrorVi[e.message]) return serverErrorVi[e.message];
-      const claimed = /^Already claimed by (.+?)\.?$/.exec(e.message);
-      if (claimed) return `Đã được ${claimed[1]} nhận trước.`;
+      for (const [pattern, text] of serverErrorPatternsVi) {
+        if (pattern.test(e.message)) return e.message.replace(pattern, text);
+      }
       return t(`error.${e.status}`) === `error.${e.status}` ? e.message : t(`error.${e.status}`);
     };
 
