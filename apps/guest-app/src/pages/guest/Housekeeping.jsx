@@ -3,55 +3,52 @@ import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
 import { useRoomRequests } from '../../useRoomRequests.js';
 import { BackButton, Badge, Icon } from '../../components/ui.jsx';
+import { useI18n } from '../../i18n.jsx';
 
 const SLOTS = ['10:00', '13:00', '16:00', '19:00'];
 const AMENITIES = [
-  { id: 'towels', label: 'Towels', icon: 'dry_cleaning' },
-  { id: 'water', label: 'Bottled Water', icon: 'water_drop' },
-  { id: 'toiletries', label: 'Toiletries', icon: 'spa' },
+  { id: 'towels', label: 'hk.amenity.towels', icon: 'dry_cleaning' },
+  { id: 'water', label: 'hk.amenity.water', icon: 'water_drop' },
+  { id: 'toiletries', label: 'hk.amenity.toiletries', icon: 'spa' },
 ];
 const MAX_NOTE = 200;
 const HK_TYPES = ['housekeeping', 'amenity'];
 
-const timeOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-const dayOf = (iso) => {
-  const d = new Date(iso);
-  const today = new Date();
-  return d.toDateString() === today.toDateString() ? 'Today' : 'Tomorrow';
-};
+/** 'common.today' | 'common.tomorrow' cho lịch hẹn. */
+const dayKey = (iso) => (new Date(iso).toDateString() === new Date().toDateString() ? 'common.today' : 'common.tomorrow');
 
 /** Các bước theo dõi dựng từ trạng thái + lịch sử của yêu cầu. */
-function stepsFor(req) {
+function stepsFor(req, { t, fmtTime: timeOf, srv }) {
   const done = req.status === 'completed';
   const working = req.status === 'in_progress';
   const state = (reached, current) => (reached ? 'done' : current ? 'current' : 'todo');
   const claimedAt = working || done ? req.claimedAt : null;
   return [
     {
-      title: 'Request Sent',
-      sub: req.items.map((i) => (i.qty > 1 ? `${i.qty}× ${i.name}` : i.name)).join(' + '),
+      title: t('hk.step.sent'),
+      sub: req.items.map((i) => (i.qty > 1 ? `${i.qty}× ${srv(i.name)}` : srv(i.name))).join(' + '),
       time: timeOf(req.createdAt),
       state: 'done',
     },
     {
-      title: req.scheduledFor && !req.assignee ? 'Scheduled' : 'Staff Assigned',
+      title: req.scheduledFor && !req.assignee ? t('hk.step.scheduled') : t('hk.step.assigned'),
       sub: req.assignee
-        ? `${req.assignee.name} • Floor ${req.roomNumber[0]} Attendant`
+        ? t('hk.step.attendant', { name: req.assignee.name, floor: req.roomNumber[0] })
         : req.scheduledFor
-          ? `${dayOf(req.scheduledFor)} at ${timeOf(req.scheduledFor)}`
-          : 'Waiting for an attendant',
+          ? t('hk.step.at', { day: t(dayKey(req.scheduledFor)), time: timeOf(req.scheduledFor) })
+          : t('hk.step.waiting'),
       time: claimedAt ? timeOf(claimedAt) : '',
       state: state(!!req.assignee || done, !req.assignee && !done),
     },
     {
-      title: 'In Progress',
-      sub: working || done ? `Attendant is servicing Room ${req.roomNumber}` : 'Starts when the attendant arrives',
-      time: working ? 'Now' : '',
+      title: t('hk.step.inProgress'),
+      sub: working || done ? t('hk.step.servicing', { n: req.roomNumber }) : t('hk.step.startsSoon'),
+      time: working ? t('common.now') : '',
       state: state(done, working),
     },
     {
-      title: 'Completed',
-      sub: done ? 'All done — enjoy your suite' : 'We will notify you',
+      title: t('hk.step.completed'),
+      sub: done ? t('hk.step.allDone') : t('hk.step.notify'),
       time: done && req.completedAt ? timeOf(req.completedAt) : '',
       state: done ? 'done' : 'todo',
     },
@@ -65,7 +62,7 @@ function Timeline({ steps }) {
         const last = i === steps.length - 1;
         const next = steps[i + 1];
         return (
-          <li key={step.title} className="flex items-stretch gap-md">
+          <li key={i} className="flex items-stretch gap-md">
             <div className="flex flex-col items-center">
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
@@ -98,6 +95,8 @@ function Timeline({ steps }) {
 
 export default function Housekeeping() {
   const { room } = useAuth().session;
+  const i18n = useI18n();
+  const { t, srv, fmtTime } = i18n;
   const [service, setService] = useState(null); // 'clean_now' | 'scheduled' | null
   const [slot, setSlot] = useState(null);
   const [amenities, setAmenities] = useState([]);
@@ -152,9 +151,9 @@ export default function Housekeeping() {
   };
 
   const summary = [
-    service === 'clean_now' && 'Clean now',
-    service === 'scheduled' && `Cleaning at ${slot}`,
-    ...amenities.map((a) => AMENITIES.find((x) => x.id === a).label),
+    service === 'clean_now' && t('hk.summary.cleanNow'),
+    service === 'scheduled' && t('hk.summary.cleanAt', { slot }),
+    ...amenities.map((a) => t(AMENITIES.find((x) => x.id === a).label)),
   ].filter(Boolean);
 
   return (
@@ -163,11 +162,11 @@ export default function Housekeeping() {
         <div className="flex items-center gap-md">
           <BackButton to="/home" />
           <div className="flex flex-col">
-            <h1 className="font-headline text-headline-md">Housekeeping</h1>
-            <span className="text-body-sm text-on-surface-variant">Room {room.number} • {room.type}</span>
+            <h1 className="font-headline text-headline-md">{t('hk.title')}</h1>
+            <span className="text-body-sm text-on-surface-variant">{t('common.room', { n: room.number })} • {srv(room.type)}</span>
           </div>
         </div>
-        <Badge dot>On Duty</Badge>
+        <Badge dot>{t('hk.onDuty')}</Badge>
       </header>
 
       <main className="px-page-margin flex flex-col gap-xl">
@@ -175,14 +174,18 @@ export default function Housekeeping() {
           <div role="status" className="flex items-start gap-sm p-md rounded-md bg-success-container text-on-success-container">
             <Icon name="check_circle" filled className="text-title-md shrink-0" />
             <p className="text-body-sm">
-              Request <span className="font-mono">#{sent.id}</span> sent.{' '}
-              {sent.etaMinutes ? `An attendant will be with you in about ${sent.etaMinutes} min.` : sent.scheduledFor ? `See you ${dayOf(sent.scheduledFor).toLowerCase()} at ${timeOf(sent.scheduledFor)}.` : ''}
+              {t('hk.sent', { id: `#${sent.id}` })}{' '}
+              {sent.etaMinutes
+                ? t('hk.sentEta', { n: sent.etaMinutes })
+                : sent.scheduledFor
+                  ? t('hk.sentScheduled', { day: t(dayKey(sent.scheduledFor)).toLowerCase(), time: fmtTime(sent.scheduledFor) })
+                  : ''}
             </p>
           </div>
         )}
 
         <section className="flex flex-col gap-md">
-          <h2 className="sr-only">Housekeeping Requests</h2>
+          <h2 className="sr-only">{t('hk.requests')}</h2>
 
           <button
             type="button"
@@ -196,12 +199,12 @@ export default function Housekeeping() {
                 <Icon name="cleaning_services" className="text-headline-md text-primary" />
               </div>
               <div className="flex flex-col gap-xs">
-                <h3 className="font-title text-title-sm">Clean Room Now</h3>
-                <p className="text-body-sm text-on-surface-variant">{cleaningOpen ? `On its way (#${latest.id})` : 'Immediate full suite refresh'}</p>
+                <h3 className="font-title text-title-sm">{t('hk.cleanNow')}</h3>
+                <p className="text-body-sm text-on-surface-variant">{cleaningOpen ? t('hk.onItsWay', { id: `#${latest.id}` }) : t('hk.cleanNowSub')}</p>
               </div>
             </div>
             <span className={`px-md py-xs rounded-full font-label text-label-sm shrink-0 ${service === 'clean_now' || cleaningOpen ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant'}`}>
-              {cleaningOpen ? 'Requested' : service === 'clean_now' ? 'Selected' : 'Select'}
+              {cleaningOpen ? t('hk.requested') : service === 'clean_now' ? t('hk.selected') : t('hk.select')}
             </span>
           </button>
 
@@ -211,11 +214,11 @@ export default function Housekeeping() {
                 <Icon name="schedule" className="text-headline-md text-secondary" />
               </div>
               <div className="flex flex-col gap-xs">
-                <h3 className="font-title text-title-sm">Schedule Cleaning</h3>
-                <p className="text-body-sm text-on-surface-variant">Pick a preferred arrival window</p>
+                <h3 className="font-title text-title-sm">{t('hk.schedule')}</h3>
+                <p className="text-body-sm text-on-surface-variant">{t('hk.scheduleSub')}</p>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-xs" role="radiogroup" aria-label="Cleaning time slots">
+            <div className="grid grid-cols-4 gap-xs" role="radiogroup" aria-label={t('hk.slots')}>
               {SLOTS.map((s) => {
                 const on = service === 'scheduled' && slot === s;
                 return (
@@ -239,8 +242,8 @@ export default function Housekeeping() {
 
           <article className="card p-lg flex flex-col gap-md">
             <div className="flex items-center justify-between">
-              <h3 className="font-title text-title-sm">Extra Amenities</h3>
-              <span className="text-body-sm text-on-surface-variant">Tap to add</span>
+              <h3 className="font-title text-title-sm">{t('hk.amenities')}</h3>
+              <span className="text-body-sm text-on-surface-variant">{t('hk.tapToAdd')}</span>
             </div>
             <div className="grid grid-cols-3 gap-sm">
               {AMENITIES.map((a) => {
@@ -256,7 +259,7 @@ export default function Housekeeping() {
                     }`}
                   >
                     <Icon name={a.icon} className="text-title-lg" />
-                    <span className="font-label text-label-sm">{a.label}</span>
+                    <span className="font-label text-label-sm">{t(a.label)}</span>
                   </button>
                 );
               })}
@@ -266,21 +269,21 @@ export default function Housekeeping() {
 
         <section aria-labelledby="live-status-heading" className="flex flex-col gap-md">
           <div className="flex items-center justify-between">
-            <h2 id="live-status-heading" className="font-title text-title-md">Live Status Tracker</h2>
+            <h2 id="live-status-heading" className="font-title text-title-md">{t('hk.tracker')}</h2>
             {latest && <span className="font-mono text-mono-sm text-secondary tabular-nums">ID #{latest.id}</span>}
           </div>
           {latest ? (
             <article className="card p-xl">
-              <Timeline steps={stepsFor(latest)} />
+              <Timeline steps={stepsFor(latest, i18n)} />
             </article>
           ) : (
-            <div className="card p-lg text-body-sm text-on-surface-variant">No housekeeping requests yet.</div>
+            <div className="card p-lg text-body-sm text-on-surface-variant">{t('hk.none')}</div>
           )}
         </section>
       </main>
 
       {hasSelection && (
-        <aside aria-label="Housekeeping request" className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-surface-container-lowest border-t border-outline-variant shadow-lg px-page-margin pt-md pb-xl z-20 flex flex-col gap-md">
+        <aside aria-label={t('hk.panel')} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-surface-container-lowest border-t border-outline-variant shadow-lg px-page-margin pt-md pb-xl z-20 flex flex-col gap-md">
           <div className="flex items-center gap-sm">
             <Icon name="edit_note" className="text-title-md text-secondary shrink-0" />
             <input
@@ -288,8 +291,8 @@ export default function Housekeeping() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={MAX_NOTE}
-              aria-label="Note for the attendant"
-              placeholder="Note (e.g. eco-friendly, baby sleeping)"
+              aria-label={t('hk.noteAria')}
+              placeholder={t('hk.notePlaceholder')}
               className="w-full px-md py-sm rounded-md bg-surface-container-low border border-outline-variant text-body-sm placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -302,7 +305,7 @@ export default function Housekeeping() {
           <div className="flex items-center justify-between gap-md">
             <p className="text-body-sm text-on-surface-variant min-w-0 truncate">{summary.join(' • ')}</p>
             <button type="button" onClick={send} disabled={sending} className="btn-primary px-xl py-md shrink-0">
-              {sending ? 'Sending…' : 'Send Request'}
+              {sending ? t('common.sending') : t('hk.sendRequest')}
             </button>
           </div>
         </aside>

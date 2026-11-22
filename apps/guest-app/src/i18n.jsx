@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { dishDescriptionVi, en, serverTextVi, vi } from './locales.js';
 
 // Đa ngôn ngữ cho app khách: 'en' | 'vi'.
 // Thêm màn hình mới: thêm key vào cả hai từ điển rồi dùng t('key') trong component.
@@ -8,54 +9,11 @@ export const LANGUAGES = [
   { id: 'vi', label: 'VI', name: 'Tiếng Việt' },
 ];
 
-const dictionaries = {
-  en: {
-    'login.eyebrow': 'AppHotel • Boutique Stay',
-    'login.title': 'Welcome to Your Stay',
-    'login.subtitle': 'Enter the 6-character code from your suite keycard to unlock in-room dining, housekeeping, and concierge.',
-    'login.codeLabel': 'Dynamic Room Code',
-    'login.example': 'Example: A8K-92P',
-    'login.codeAria': '6-character room access code',
-    'login.submit': 'Access Room Services',
-    'login.checking': 'Checking code…',
-    'login.or': 'or',
-    'login.scanQr': 'Scan Room QR Code',
-    'login.qrHint': 'Open your phone camera and point it at the QR code on your keycard sleeve — you will be signed in automatically.',
-    'login.staffSection': 'For Hotel Staff & Operations',
-    'login.staffTitle': 'Staff Portal Login',
-    'login.staffDepartments': 'Housekeeping • Kitchen • Reception',
-    'login.help': 'Need assistance? Dial 0 from your suite phone.',
-    'login.expired': 'Your session ended (the room code was changed). Please enter the new code.',
-    'login.error.invalid': 'That code is not valid. Check your keycard or dial 0 for reception.',
-    'login.error.locked': 'Too many attempts. Please wait a few minutes or dial 0 for reception.',
-    'login.error.format': 'Room code must be 6 characters.',
-    'login.error.network': 'Cannot reach the hotel server. Please try again.',
-    'language.label': 'Language',
-  },
-  vi: {
-    'login.eyebrow': 'AppHotel • Boutique Stay',
-    'login.title': 'Chào mừng quý khách',
-    'login.subtitle': 'Nhập mã 6 ký tự trên thẻ phòng để sử dụng dịch vụ ăn uống tại phòng, dọn phòng và trợ lý ảo.',
-    'login.codeLabel': 'Mã phòng',
-    'login.example': 'Ví dụ: A8K-92P',
-    'login.codeAria': 'Mã phòng gồm 6 ký tự',
-    'login.submit': 'Vào dịch vụ phòng',
-    'login.checking': 'Đang kiểm tra mã…',
-    'login.or': 'hoặc',
-    'login.scanQr': 'Quét mã QR của phòng',
-    'login.qrHint': 'Mở camera điện thoại và hướng vào mã QR trên bìa thẻ phòng — quý khách sẽ được đăng nhập tự động.',
-    'login.staffSection': 'Dành cho nhân viên khách sạn',
-    'login.staffTitle': 'Đăng nhập nhân viên',
-    'login.staffDepartments': 'Buồng phòng • Bếp • Lễ tân',
-    'login.help': 'Cần hỗ trợ? Bấm số 0 trên điện thoại trong phòng.',
-    'login.expired': 'Phiên đã kết thúc (mã phòng đã được đổi). Vui lòng nhập mã mới.',
-    'login.error.invalid': 'Mã không hợp lệ. Vui lòng kiểm tra thẻ phòng hoặc bấm số 0 để gọi lễ tân.',
-    'login.error.locked': 'Nhập sai quá nhiều lần. Vui lòng đợi vài phút hoặc bấm số 0 để gọi lễ tân.',
-    'login.error.format': 'Mã phòng gồm 6 ký tự.',
-    'login.error.network': 'Không kết nối được máy chủ khách sạn. Vui lòng thử lại.',
-    'language.label': 'Ngôn ngữ',
-  },
-};
+const dictionaries = { en, vi };
+const LOCALES = { en: 'en-US', vi: 'vi-VN' };
+
+/** Thay {biến} trong câu. */
+const fill = (text, vars) => (vars ? text.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : text);
 
 function initialLanguage() {
   try {
@@ -89,8 +47,22 @@ export function I18nProvider({ children }) {
 
   const value = useMemo(() => {
     // Thiếu bản dịch -> dùng tiếng Anh, rồi đến chính key (dễ phát hiện khi phát triển)
-    const t = (key) => dictionaries[lang][key] ?? dictionaries.en[key] ?? key;
-    return { lang, setLang, t };
+    const t = (key, vars) => fill(dictionaries[lang][key] ?? dictionaries.en[key] ?? key, vars);
+    const locale = LOCALES[lang];
+    /** Giờ theo ngôn ngữ, vd 7:12 PM / 19:12. */
+    const fmtTime = (iso) => new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+    /** Ngày ngắn, vd Sun, Nov 22 / CN, 22 thg 11. */
+    const fmtDate = (date, opts = { weekday: 'short', month: 'short', day: 'numeric' }) => new Date(date).toLocaleDateString(locale, opts);
+    /** Dịch chữ do server trả về (tên yêu cầu, đồ dùng, loại phòng); không có bản dịch thì giữ nguyên. */
+    const srv = (text) => {
+      if (lang !== 'vi' || !text) return text;
+      const slot = /^Scheduled Cleaning · (\d{2}:\d{2})$/.exec(text);
+      if (slot) return `Hẹn dọn phòng · ${slot[1]}`;
+      return serverTextVi[text] ?? text;
+    };
+    /** Mô tả món ăn theo ngôn ngữ. */
+    const dishDesc = (item) => (lang === 'vi' && dishDescriptionVi[item.id]) || item.description;
+    return { lang, setLang, t, locale, fmtTime, fmtDate, srv, dishDesc };
   }, [lang, setLang]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

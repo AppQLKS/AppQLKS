@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useAuth } from '../../auth.jsx';
 import { BackButton, Icon, money } from '../../components/ui.jsx';
+import { useI18n } from '../../i18n.jsx';
 
 const MAX_QTY = 10;
 const MAX_NOTE = 200;
@@ -29,6 +30,7 @@ function DishImage({ item }) {
 }
 
 function OrderPlaced({ order, onNew }) {
+  const { t } = useI18n();
   const total = order.items.reduce((s, i) => s + i.price * i.qty, 0);
   return (
     <div className="min-h-screen max-w-[390px] mx-auto px-page-margin py-3xl flex flex-col justify-center gap-xl">
@@ -36,14 +38,14 @@ function OrderPlaced({ order, onNew }) {
         <div className="w-16 h-16 rounded-full bg-success-container flex items-center justify-center">
           <Icon name="check_circle" filled className="text-[36px] text-primary" />
         </div>
-        <h1 className="font-headline text-headline-lg">Order Sent to Kitchen</h1>
+        <h1 className="font-headline text-headline-lg">{t('dining.placed.title')}</h1>
         <p className="text-body-md text-on-surface-variant">
-          Estimated delivery in about <span className="font-semibold text-on-surface">{order.etaMinutes} min</span> to Room {order.roomNumber}.
+          {t('dining.placed.eta', { minutes: t('common.minutes', { n: order.etaMinutes }), n: order.roomNumber })}
         </p>
       </div>
       <article className="card p-lg flex flex-col gap-md">
         <div className="flex items-center justify-between">
-          <span className="font-label text-label-md text-secondary uppercase tracking-wider">Request</span>
+          <span className="font-label text-label-md text-secondary uppercase tracking-wider">{t('dining.placed.request')}</span>
           <span className="font-mono text-mono-sm tabular-nums">#{order.id}</span>
         </div>
         <ul className="flex flex-col gap-xs border-t border-outline-variant/60 pt-md">
@@ -54,29 +56,30 @@ function OrderPlaced({ order, onNew }) {
             </li>
           ))}
         </ul>
-        {order.note && <p className="text-body-sm text-on-surface-variant">Note: {order.note}</p>}
+        {order.note && <p className="text-body-sm text-on-surface-variant">{t('common.note')}: {order.note}</p>}
         <div className="flex items-center justify-between border-t border-outline-variant/60 pt-md font-title text-title-sm">
-          <span>Added to your folio</span>
+          <span>{t('dining.placed.added')}</span>
           <span className="tabular-nums">{money(total)}</span>
         </div>
       </article>
       <div className="flex flex-col gap-sm">
-        <Link to="/home" className="btn-primary w-full px-xl py-lg">Track My Order</Link>
-        <button type="button" onClick={onNew} className="btn-outline w-full px-xl py-md">Order Something Else</button>
+        <Link to="/home" className="btn-primary w-full px-xl py-lg">{t('dining.placed.track')}</Link>
+        <button type="button" onClick={onNew} className="btn-outline w-full px-xl py-md">{t('dining.placed.again')}</button>
       </div>
     </div>
   );
 }
 
 const categories = [
-  { id: 'all', label: 'All' },
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'local', label: 'Local Cuisine' },
-  { id: 'drinks', label: 'Drinks' },
+  { id: 'all', label: 'dining.cat.all' },
+  { id: 'breakfast', label: 'dining.cat.breakfast' },
+  { id: 'local', label: 'dining.cat.local' },
+  { id: 'drinks', label: 'dining.cat.drinks' },
 ];
 
 export default function Dining() {
   const { room } = useAuth().session;
+  const { t, dishDesc } = useI18n();
   const [menu, setMenu] = useState([]);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('all');
@@ -140,29 +143,29 @@ export default function Dining() {
         <div className="flex items-center gap-md">
           <BackButton to="/home" />
           <div className="flex flex-col">
-            <h1 className="font-headline text-title-lg">Room Service &amp; Dining</h1>
-            <span className="text-body-sm text-on-surface-variant">Delivering to Room {room.number}</span>
+            <h1 className="font-headline text-title-lg">{t('dining.title')}</h1>
+            <span className="text-body-sm text-on-surface-variant">{t('dining.deliverTo', { n: room.number })}</span>
           </div>
         </div>
         <span className="inline-flex items-center px-md py-xs rounded-full bg-secondary-container text-on-secondary-container font-label text-label-sm shrink-0">
-          24h Kitchen
+          {t('dining.kitchen24')}
         </span>
       </header>
 
       <main className="px-page-margin flex flex-col gap-lg">
         <label className="relative flex items-center">
-          <span className="sr-only">Search menu</span>
+          <span className="sr-only">{t('dining.search')}</span>
           <Icon name="search" className="text-title-md text-outline absolute left-md" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search dishes, coffee, desserts..."
+            placeholder={t('dining.searchPlaceholder')}
             className="w-full pl-3xl pr-lg py-md rounded-md bg-surface-container-lowest border border-outline-variant text-body-md placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </label>
 
-        <div className="flex items-center gap-sm overflow-x-auto pb-xs" role="tablist" aria-label="Menu categories">
+        <div className="flex items-center gap-sm overflow-x-auto pb-xs" role="tablist" aria-label={t('dining.categories')}>
           {categories.map((c) => (
             <button
               key={c.id}
@@ -172,28 +175,28 @@ export default function Dining() {
               onClick={() => setCategory(c.id)}
               className={`pill ${category === c.id ? 'pill-active' : 'pill-idle'}`}
             >
-              {c.label}
+              {t(c.label)}
             </button>
           ))}
         </div>
 
-        {error && <p className="text-body-sm text-error">Could not load the menu: {error}</p>}
+        {error && <p className="text-body-sm text-error">{t('dining.loadError', { error })}</p>}
 
-        <section aria-label="Menu items" className="flex flex-col gap-md">
+        <section aria-label={t('dining.items')} className="flex flex-col gap-md">
           {visible.map((item) => (
             <article key={item.id} className="card p-md flex items-center gap-md">
               <DishImage item={item} />
               <div className="flex-1 flex flex-col justify-between gap-sm min-w-0">
                 <div className="flex flex-col gap-xs">
                   <h2 className="font-title text-title-sm">{item.name}</h2>
-                  <p className="text-body-sm text-on-surface-variant">{item.description}</p>
+                  <p className="text-body-sm text-on-surface-variant">{dishDesc(item)}</p>
                 </div>
                 <div className="flex items-center justify-between gap-sm">
                   <div className="flex items-center gap-sm">
                     <span className="font-title text-title-sm tabular-nums">{money(item.price)}</span>
                     <span className="inline-flex items-center gap-xs text-body-sm text-on-surface-variant tabular-nums">
                       <Icon name="schedule" className="text-label-md" />
-                      {item.prepMinutes} min
+                      {t('common.minutes', { n: item.prepMinutes })}
                     </span>
                   </div>
                   <div className="flex items-center gap-xs shrink-0">
@@ -202,7 +205,7 @@ export default function Dining() {
                         <button
                           type="button"
                           onClick={() => change(item.id, -1)}
-                          aria-label={`Remove one ${item.name}`}
+                          aria-label={t('dining.removeOne', { name: item.name })}
                           className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-container-low border border-outline-variant text-on-surface hover:bg-surface-container active:scale-95 transition duration-state-change"
                         >
                           <Icon name="remove" className="text-title-md" />
@@ -216,7 +219,7 @@ export default function Dining() {
                       type="button"
                       onClick={() => change(item.id, 1)}
                       disabled={cart[item.id] >= MAX_QTY}
-                      aria-label={`Add ${item.name} to order`}
+                      aria-label={t('dining.addOne', { name: item.name })}
                       className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-40 transition duration-state-change"
                     >
                       <Icon name="add" className="text-title-md" />
@@ -229,7 +232,7 @@ export default function Dining() {
         </section>
       </main>
 
-      <aside aria-label="Order Cart" className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-surface-container-lowest border-t border-outline-variant shadow-lg px-page-margin pt-md pb-xl z-20 flex flex-col gap-md">
+      <aside aria-label={t('dining.cart')} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] bg-surface-container-lowest border-t border-outline-variant shadow-lg px-page-margin pt-md pb-xl z-20 flex flex-col gap-md">
         <div className="flex items-center gap-sm">
           <Icon name="edit_note" className="text-title-md text-secondary shrink-0" />
           <input
@@ -237,8 +240,8 @@ export default function Dining() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={MAX_NOTE}
-            aria-label="Special request note"
-            placeholder="Special request (e.g. Less spicy, no onions)"
+            aria-label={t('dining.noteAria')}
+            placeholder={t('dining.notePlaceholder')}
             className="w-full px-md py-sm rounded-md bg-surface-container-low border border-outline-variant text-body-sm placeholder:text-on-surface-variant focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -255,11 +258,11 @@ export default function Dining() {
             </span>
             <div className="flex flex-col">
               <span className="font-title text-title-md tabular-nums">{money(total)}</span>
-              <span className="text-body-sm text-on-surface-variant">Room {room.number} folio</span>
+              <span className="text-body-sm text-on-surface-variant">{t('dining.folio', { n: room.number })}</span>
             </div>
           </div>
           <button type="button" onClick={placeOrder} disabled={count === 0 || placing} className="btn-primary px-xl py-md">
-            {placing ? 'Sending…' : 'Place Order'}
+            {placing ? t('common.sending') : t('dining.placeOrder')}
           </button>
         </div>
       </aside>
