@@ -1,4 +1,6 @@
-// Vite proxy chuyển /api -> http://localhost:4000
+// Trên web: gọi /api (Vite proxy chuyển sang http://localhost:4000).
+// Trong app Android (Capacitor): không có proxy -> gọi thẳng VITE_API_URL (xem .env.android).
+export const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 // App này có 2 loại phiên độc lập: khách ('guest') và nhân viên ('staff').
 
 const STORAGE_KEYS = { guest: 'apphotel.guest', staff: 'apphotel.staff.mobile' };
@@ -38,7 +40,7 @@ export class ApiError extends Error {
  */
 export async function api(path, { auth = 'guest', ...options } = {}) {
   const token = loadSession(auth)?.token;
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

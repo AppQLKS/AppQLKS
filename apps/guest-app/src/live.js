@@ -1,3 +1,5 @@
+import { API_BASE } from './api.js';
+
 /**
  * Nhận thay đổi yêu cầu realtime qua Server-Sent Events.
  * Dùng fetch thay vì EventSource để gửi token qua header Authorization
@@ -16,7 +18,7 @@ export function subscribeRequests(
   const connect = async () => {
     controller = new AbortController();
     try {
-      const res = await fetch(`/api${path}`, {
+      const res = await fetch(`${API_BASE}/api${path}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
         signal: controller.signal,
       });
