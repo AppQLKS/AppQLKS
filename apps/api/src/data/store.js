@@ -41,7 +41,7 @@ export function nextRequestId() {
 }
 
 /** Thêm yêu cầu mới (đã được kiểm tra hợp lệ) vào hàng đợi. */
-export function addRequest({ roomNumber, type, title, items, note }) {
+export function addRequest({ roomNumber, type, title, items, note, kind }) {
   const createdAt = new Date().toISOString();
   const request = {
     id: nextRequestId(),
@@ -50,6 +50,7 @@ export function addRequest({ roomNumber, type, title, items, note }) {
     title,
     items,
     note: note || undefined,
+    ...(kind && { kind }), // 'turnover' = dọn phòng sau trả phòng: làm xong thì phòng về Trống
     status: 'pending',
     assignedTo: null,
     createdAt,
@@ -84,11 +85,12 @@ export function publishRequest(request) {
 }
 
 /**
- * Sự kiện về lượt lưu trú (trả phòng...).
- * @param {'checkout_requested'|'checkout_cancelled'|'checked_out'} type
+ * Sự kiện về lượt lưu trú / trạng thái phòng.
+ * @param {'checkout_requested'|'checkout_cancelled'|'checked_out'|'checked_in'|'room_ready'} type
+ * @param {{ roomNumber: string, guestName?: string|null }} stay
  */
 export function publishStay(type, stay, extra = {}) {
-  bus.emit('stay', { type, roomNumber: stay.roomNumber, guestName: stay.guestName, at: new Date().toISOString(), ...extra });
+  bus.emit('stay', { type, roomNumber: stay.roomNumber, guestName: stay.guestName ?? null, at: new Date().toISOString(), ...extra });
 }
 
 // Dữ liệu mẫu chưa có lịch sử -> dựng lại từ trạng thái hiện tại
@@ -107,10 +109,19 @@ for (const r of db.requests) {
   }
 }
 
-/** Hoá đơn dịch vụ phòng: các đơn đồ ăn chưa huỷ của phòng + phí dịch vụ 10%. */
-export function folioForRoom(number) {
-  const lines = db.requests
-    .filter((r) => r.roomNumber === String(number) && r.type === 'food' && r.status !== 'cancelled')
+/**
+ * Yêu cầu thuộc một lượt lưu trú: cùng phòng và tạo sau lúc nhận phòng,
+ * để khách mới không thấy yêu cầu / hoá đơn của khách trước.
+ * (Lượt lưu trú trong dữ liệu mẫu không có startedAt -> lấy mọi yêu cầu của phòng.)
+ */
+export function requestsOfStay(stay) {
+  return db.requests.filter((r) => r.roomNumber === stay.roomNumber && (!stay.startedAt || r.createdAt >= stay.startedAt));
+}
+
+/** Hoá đơn dịch vụ phòng của lượt lưu trú: các đơn đồ ăn chưa huỷ + phí dịch vụ 10%. */
+export function folioForStay(stay) {
+  const lines = requestsOfStay(stay)
+    .filter((r) => r.type === 'food' && r.status !== 'cancelled')
     .flatMap((r) => r.items.map((i) => ({ requestId: r.id, name: i.name, qty: i.qty, amount: (i.price ?? 0) * i.qty })));
   const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
   const service = Math.round(subtotal * SERVICE_RATE * 100) / 100;

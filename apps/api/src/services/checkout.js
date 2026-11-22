@@ -3,7 +3,7 @@ import {
   db,
   findActiveStayByRoom,
   findRoom,
-  folioForRoom,
+  folioForStay,
   publishStay,
   setRequestStatus,
 } from '../data/store.js';
@@ -21,7 +21,7 @@ export function checkoutStatus(stay) {
     checkOut: stay.checkOut,
     requested: !!stay.checkoutRequested,
     requestedAt: stay.checkoutRequestedAt ?? null,
-    folio: folioForRoom(stay.roomNumber),
+    folio: folioForStay(stay),
     openRequests: openRequestsOf(stay.roomNumber).length,
   };
 }
@@ -31,7 +31,7 @@ export function requestCheckout(stay) {
   if (!stay.checkoutRequested) {
     stay.checkoutRequested = true;
     stay.checkoutRequestedAt = new Date().toISOString();
-    publishStay('checkout_requested', stay, { folioTotal: folioForRoom(stay.roomNumber).total });
+    publishStay('checkout_requested', stay, { folioTotal: folioForStay(stay).total });
   }
   return checkoutStatus(stay);
 }
@@ -65,7 +65,7 @@ export function completeCheckout(roomNumber, staff) {
   const stay = findActiveStayByRoom(roomNumber);
   if (!stay) throw new HttpError(404, 'No active stay in this room.');
 
-  const folio = folioForRoom(roomNumber);
+  const folio = folioForStay(stay);
   for (const request of openRequestsOf(roomNumber)) {
     setRequestStatus(request, 'cancelled', { by: staff.id, reason: 'Guest checked out' });
   }
@@ -82,6 +82,7 @@ export function completeCheckout(roomNumber, staff) {
   const turnover = addRequest({
     roomNumber,
     type: 'housekeeping',
+    kind: 'turnover',
     title: 'Turnover Cleaning',
     items: [{ name: 'Full Linen & Bath Reset', qty: 1 }, { name: 'Minibar restock check', qty: 1 }],
     note: `Checked out by ${staff.name}`,
