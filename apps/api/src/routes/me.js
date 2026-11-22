@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, findRoom, folioForRoom, presentRequest } from '../data/store.js';
+import { findRoom, folioForStay, presentRequest, requestsOfStay } from '../data/store.js';
 import { requireGuest } from '../middleware/requireGuest.js';
 import { HttpError } from '../middleware/errors.js';
 import { estimateMinutes, placeFoodOrder } from '../services/foodOrders.js';
@@ -35,10 +35,9 @@ router.get('/events', (req, res) => {
   });
 });
 
-// GET /api/me/requests -> yêu cầu của phòng mình
+// GET /api/me/requests -> yêu cầu của lượt lưu trú này (không gồm của khách trước)
 router.get('/requests', (req, res) => {
-  const list = db.requests
-    .filter((r) => r.roomNumber === req.stay.roomNumber)
+  const list = requestsOfStay(req.stay)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .map(presentRequest);
   res.json(list);
@@ -60,7 +59,7 @@ router.post('/requests', (req, res) => {
 });
 
 // GET /api/me/folio -> hoá đơn dịch vụ phòng
-router.get('/folio', (req, res) => res.json(folioForRoom(req.stay.roomNumber)));
+router.get('/folio', (req, res) => res.json(folioForStay(req.stay)));
 
 // Trả phòng nhanh: xem tình trạng / xin trả phòng / huỷ yêu cầu
 router.get('/checkout', (req, res) => res.json(checkoutStatus(req.stay)));

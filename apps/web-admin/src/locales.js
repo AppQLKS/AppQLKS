@@ -66,7 +66,7 @@ export const en = {
 
   'room.panel': 'Room Status and Dynamic Code Panel',
   'room.gridTitle': 'Room Status & Dynamic Access Grid',
-  'room.gridHint': 'Click any occupied room to inspect guest stay, dynamic door code, and room service folio.',
+  'room.gridHint': 'Click an occupied room for the stay, door code and folio, a vacant room to check in a guest, or a room that needs cleaning to mark it ready.',
   'room.occupied': 'Occupied',
   'room.vacant': 'Vacant',
   'room.cleaning': 'Needs Cleaning',
@@ -95,6 +95,23 @@ export const en = {
   'room.approveExpress': 'Approve Express Checkout',
   'room.checkOut': 'Check Out Guest',
   'room.checkoutConfirm': 'Check out Room {number} ({guest}) and deactivate the door code?\nBalance: {total}',
+
+  'checkin.title': 'Check in a new guest',
+  'checkin.hint': 'A door code is created for the guest. They sign in to the app with it.',
+  'checkin.name': 'Guest name',
+  'checkin.namePlaceholder': 'e.g., Lan Nguyen',
+  'checkin.guests': 'Guests',
+  'checkin.checkOut': 'Check-out date',
+  'checkin.from': 'From today · {date}',
+  'checkin.night': '{n} night',
+  'checkin.nights': '{n} nights',
+  'checkin.submit': 'Check In & Create Door Code',
+  'checkin.busy': 'Checking in…',
+  'checkin.success': 'Checked in. Give the door code below to the guest.',
+  'cleaning.hint': 'This room is waiting for cleaning. It becomes vacant automatically when housekeeping completes the turnover cleaning task.',
+  'cleaning.ready': 'Mark as Cleaned & Ready',
+  'cleaning.busy': 'Updating…',
+  'cleaning.confirm': 'Mark Room {number} as cleaned and ready for the next guest? Any open turnover cleaning task for this room will be closed.',
 
   'checkout.section': 'Express checkout requests',
   'checkout.eyebrow': 'Express Checkout Request • Room {number} • {elapsed}',
@@ -219,7 +236,7 @@ export const vi = {
 
   'room.panel': 'Trạng thái phòng và mã cửa',
   'room.gridTitle': 'Trạng thái phòng & mã cửa động',
-  'room.gridHint': 'Bấm vào phòng có khách để xem thông tin lưu trú, mã cửa và hoá đơn dịch vụ phòng.',
+  'room.gridHint': 'Bấm phòng có khách để xem lưu trú, mã cửa và hoá đơn; bấm phòng Trống để nhận phòng; bấm phòng Cần dọn để đánh dấu đã dọn.',
   'room.occupied': 'Có khách',
   'room.vacant': 'Trống',
   'room.cleaning': 'Cần dọn',
@@ -248,6 +265,23 @@ export const vi = {
   'room.approveExpress': 'Duyệt trả phòng nhanh',
   'room.checkOut': 'Trả phòng cho khách',
   'room.checkoutConfirm': 'Trả phòng {number} ({guest}) và vô hiệu hoá mã cửa?\nSố tiền: {total}',
+
+  'checkin.title': 'Nhận phòng cho khách mới',
+  'checkin.hint': 'Hệ thống tạo mã cửa cho khách; khách dùng mã này để đăng nhập app.',
+  'checkin.name': 'Tên khách',
+  'checkin.namePlaceholder': 'vd: Nguyễn Lan',
+  'checkin.guests': 'Số khách',
+  'checkin.checkOut': 'Ngày trả phòng',
+  'checkin.from': 'Từ hôm nay · {date}',
+  'checkin.night': '{n} đêm',
+  'checkin.nights': '{n} đêm',
+  'checkin.submit': 'Nhận phòng & tạo mã cửa',
+  'checkin.busy': 'Đang nhận phòng…',
+  'checkin.success': 'Đã nhận phòng. Hãy đưa mã cửa bên dưới cho khách.',
+  'cleaning.hint': 'Phòng đang chờ dọn. Phòng sẽ tự chuyển về Trống khi buồng phòng hoàn tất việc dọn phòng sau trả phòng.',
+  'cleaning.ready': 'Đã dọn xong, sẵn sàng đón khách',
+  'cleaning.busy': 'Đang cập nhật…',
+  'cleaning.confirm': 'Đánh dấu phòng {number} đã dọn xong và sẵn sàng cho khách mới? Việc dọn phòng còn mở của phòng này sẽ được đóng lại.',
 
   'checkout.section': 'Yêu cầu trả phòng nhanh',
   'checkout.eyebrow': 'Yêu cầu trả phòng nhanh • Phòng {number} • {elapsed}',
@@ -338,6 +372,17 @@ export const serverTextVi = {
   'Skyline Loft': 'Loft hướng phố',
 };
 
+// Lỗi API có chèn giá trị (tên, số phòng...): [mẫu, bản dịch dùng $1]
+export const serverErrorPatternsVi = [
+  [/^Already claimed by (.+?)\.?$/, 'Đã được $1 nhận trước.'],
+  [/^Room (\w+) is already occupied\.$/, 'Phòng $1 đã có khách.'],
+  [/^Room (\w+) still needs cleaning\.$/, 'Phòng $1 chưa được dọn xong.'],
+  [/^Room (\w+) is not waiting for cleaning\.$/, 'Phòng $1 không ở trạng thái chờ dọn.'],
+  [/^Number of guests must be from 1 to (\d+)\.$/, 'Số khách phải từ 1 đến $1.'],
+  [/^Guest name is limited to (\d+) characters\.$/, 'Tên khách tối đa $1 ký tự.'],
+  [/^Choose a check-out date from tomorrow up to (\d+) nights\.$/, 'Chọn ngày trả phòng từ ngày mai, tối đa $1 đêm.'],
+];
+
 // Lỗi API hay gặp ở web admin (server trả tiếng Anh)
 export const serverErrorVi = {
   'Enter your staff ID and password.': 'Nhập mã nhân viên và mật khẩu.',
@@ -347,4 +392,6 @@ export const serverErrorVi = {
   'Request not found': 'Không tìm thấy yêu cầu.',
   'Room not found': 'Không tìm thấy phòng.',
   'Only reception or a manager can cancel a request.': 'Chỉ lễ tân hoặc quản lý được huỷ yêu cầu.',
+  'Enter the guest name.': 'Nhập tên khách.',
+  'Your role cannot do this.': 'Vai trò của bạn không được làm thao tác này.',
 };
