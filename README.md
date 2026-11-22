@@ -10,6 +10,7 @@ apps/
   api/         Node.js + Express – REST API, dữ liệu, chatbot tool calling   (cổng 4000)
   web-admin/   React + Vite – web cho lễ tân, bếp, buồng phòng               (cổng 5173)
   guest-app/   React PWA – app cho khách (đăng nhập bằng mã phòng)           (cổng 5174)
+    android/   Project Android Studio (Capacitor) bọc chính guest-app
 ```
 
 ## Chạy dự án
@@ -24,6 +25,29 @@ npm run dev                              # chạy cả 3 app cùng lúc
 
 Hoặc chạy riêng: `npm run dev:api`, `npm run dev:admin`, `npm run dev:guest`.
 Hai frontend gọi `/api/...` và được Vite proxy sang `http://localhost:4000`.
+
+## Chạy app khách trên Android (Android Studio)
+
+App khách được đóng gói thành app Android bằng [Capacitor](https://capacitorjs.com) – vẫn là code React trong `apps/guest-app`,
+project Android nằm ở `apps/guest-app/android`. Yêu cầu: Android Studio (kèm Android SDK 36), **Node.js 22 trở lên**.
+
+1. Chạy API ở một terminal: `npm run dev:api`
+2. Ở terminal khác, build giao diện và mở Android Studio:
+   ```bash
+   npm run android
+   ```
+   (= `vite build --mode android` → `cap sync android` → mở `apps/guest-app/android` trong Android Studio)
+3. Trong Android Studio: đợi Gradle sync xong → chọn máy ảo (Device Manager) hoặc điện thoại → bấm **Run ▶**.
+4. Đăng nhập bằng mã phòng `A8K-92P` như bản web.
+
+**Địa chỉ API** lấy từ [apps/guest-app/.env.android](apps/guest-app/.env.android):
+- Máy ảo: `http://10.0.2.2:4000` (mặc định – 10.0.2.2 là localhost của máy tính).
+- Điện thoại thật: đổi thành IP máy tính cùng Wi-Fi (xem bằng `ipconfig`), ví dụ `http://192.168.1.10:4000`,
+  cho phép Node.js qua Windows Firewall, rồi chạy lại `npm run android`.
+
+Mỗi lần sửa code React, chạy lại `npm run android:build -w apps/guest-app` rồi Run lại trong Android Studio.
+App đang cho phép gọi API `http://` để tiện phát triển; khi triển khai thật hãy dùng API `https://` và bỏ
+`android:usesCleartextTraffic` trong `AndroidManifest.xml`.
 
 ## API hiện có
 

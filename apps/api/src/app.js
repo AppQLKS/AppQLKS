@@ -16,9 +16,11 @@ import { notFound, errorHandler } from './middleware/errors.js';
  */
 export function createApp(options = {}) {
   const app = express();
-  const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://localhost:5174')
+  const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim())
+    // App Android (Capacitor) chạy giao diện từ origin http://localhost (không có cổng)
+    .concat(['http://localhost', 'capacitor://localhost']);
 
   app.use(cors({ origin: origins }));
   app.use(express.json());
