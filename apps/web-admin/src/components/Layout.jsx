@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { api, loadSession } from '../api.js';
+import { LanguageSwitch, useI18n } from '../i18n.jsx';
 import { mergeRequest, subscribeRequests } from '../live.js';
 import { useStaff } from '../staff.jsx';
 import { Icon, initials } from './ui.jsx';
 
 export default function Layout() {
-  const { staff, role, logout } = useStaff();
+  const { staff, logout } = useStaff();
+  const { t, fmtDate, apiError } = useI18n();
+  const role = t(`dept.${staff.department}`);
   const [rooms, setRooms] = useState([]);
   const [requests, setRequests] = useState([]);
   const [checkouts, setCheckouts] = useState([]); // phòng đang chờ duyệt trả phòng
@@ -21,8 +24,8 @@ export default function Layout() {
         setCheckouts(c);
         setError('');
       })
-      .catch((e) => setError(e.message));
-  }, [canCheckout]);
+      .catch((e) => setError(apiError(e)));
+  }, [canCheckout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(reload, [reload]);
 
@@ -47,11 +50,11 @@ export default function Layout() {
   const syncOk = !error && live === 'live';
 
   const nav = [
-    { to: '/rooms', label: 'Room Grid & Check-in', icon: 'grid_view' },
-    { to: '/kitchen', label: 'F&B Kitchen Orders', icon: 'restaurant', badge: open('kitchen'), tone: 'bg-amber-tint text-on-amber-tint' },
-    { to: '/housekeeping', label: 'Housekeeping Queue', icon: 'cleaning_services', badge: open('housekeeping'), tone: 'bg-blue-tint text-on-blue-tint' },
-    { to: '/knowledge', label: 'AI Knowledge Base', icon: 'auto_awesome' },
-    { to: '/analytics', label: 'Analytics & Reports', icon: 'bar_chart' },
+    { to: '/rooms', label: t('nav.rooms'), icon: 'grid_view' },
+    { to: '/kitchen', label: t('nav.kitchen'), icon: 'restaurant', badge: open('kitchen'), tone: 'bg-amber-tint text-on-amber-tint' },
+    { to: '/housekeeping', label: t('nav.housekeeping'), icon: 'cleaning_services', badge: open('housekeeping'), tone: 'bg-blue-tint text-on-blue-tint' },
+    { to: '/knowledge', label: t('nav.knowledge'), icon: 'auto_awesome' },
+    { to: '/analytics', label: t('nav.analytics'), icon: 'bar_chart' },
   ];
 
   return (
@@ -64,16 +67,16 @@ export default function Layout() {
             </div>
             <div className="flex flex-col">
               <span className="text-title-md">AppHotel</span>
-              <span className="text-label-sm text-sidebar-muted">Admin &amp; Staff Portal</span>
+              <span className="text-label-sm text-sidebar-muted">{t('brand.portal')}</span>
             </div>
           </div>
 
           <div className="w-full flex items-center gap-2 px-gutter-md py-gutter-sm rounded bg-sidebar-active border border-sidebar-muted/25">
             <span className="w-2 h-2 rounded-full bg-status-emerald shrink-0" aria-hidden="true" />
-            <span className="text-label-md truncate">Role: {role}</span>
+            <span className="text-label-md truncate">{t('layout.role', { role })}</span>
           </div>
 
-          <nav aria-label="Main navigation" className="flex flex-col gap-gutter-xs">
+          <nav aria-label={t('nav.label')} className="flex flex-col gap-gutter-xs">
             {nav.map((item) => (
               <NavLink
                 key={item.to}
@@ -107,8 +110,8 @@ export default function Layout() {
           <button
             type="button"
             onClick={logout}
-            aria-label="Sign out"
-            title="Sign out"
+            aria-label={t('layout.signOut')}
+            title={t('layout.signOut')}
             className="inline-flex items-center justify-center w-8 h-8 rounded text-sidebar-muted hover:bg-sidebar-active hover:text-on-brand-slate transition-colors duration-state-change"
           >
             <Icon name="logout" className="text-[18px]" />
@@ -119,16 +122,19 @@ export default function Layout() {
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="bg-surface-low border-b border-outline-variant px-page-margin py-gutter-lg flex flex-wrap items-center justify-between gap-gutter-md">
           <div className="flex flex-col gap-0.5">
-            <h1 className="text-headline-lg">Live Property Operations</h1>
+            <h1 className="text-headline-lg">{t('layout.title')}</h1>
             <p className="text-body-sm text-on-surface-variant">
-              The Laurel Boutique Hotel · {rooms.length} Suites &amp; Lofts ·{' '}
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              {t('layout.subtitle', {
+                count: rooms.length,
+                date: fmtDate(new Date(), { weekday: 'long', month: 'short', day: 'numeric' }),
+              })}
             </p>
           </div>
           <div className="flex items-center gap-gutter-md">
+            <LanguageSwitch />
             <span role="status" className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${syncOk ? 'bg-emerald-tint text-on-emerald-tint' : 'bg-amber-tint text-on-amber-tint'}`}>
               <span className={`w-2 h-2 rounded-full ${syncOk ? 'bg-status-emerald' : 'bg-status-amber'}`} aria-hidden="true" />
-              <span className="text-label-md">{error ? 'API Offline' : syncOk ? 'Sync Live' : 'Reconnecting…'}</span>
+              <span className="text-label-md">{error ? t('layout.offline') : syncOk ? t('layout.live') : t('layout.reconnecting')}</span>
             </span>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container border border-outline-variant">
               <Icon name="person" className="text-[16px] text-on-surface-variant" />
@@ -140,7 +146,7 @@ export default function Layout() {
         <main className="p-page-margin flex flex-col gap-section">
           {error && (
             <p className="panel p-gutter-lg text-body-sm text-on-error-tint">
-              Could not reach the API ({error}). Run <code className="font-mono">npm run dev:api</code>.
+              {t('layout.apiDown', { error })} <code className="font-mono">npm run dev:api</code>.
             </p>
           )}
           <Outlet context={{ rooms, requests, setRequests, checkouts, canCheckout, reload }} />

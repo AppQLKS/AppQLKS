@@ -2,13 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { Navigate, useLocation } from 'react-router-dom';
 import { api, loadSession, saveSession, setUnauthorizedHandler } from './api.js';
 
-export const DEPARTMENT_LABEL = {
-  reception: 'Reception',
-  kitchen: 'Kitchen',
-  housekeeping: 'Housekeeping',
-  manager: 'Manager',
-};
-
 const StaffContext = createContext(null);
 
 export function StaffProvider({ children }) {
@@ -44,7 +37,7 @@ export function StaffProvider({ children }) {
   };
 
   const staff = session?.staff ?? null;
-  const value = { session, staff, login, logout, expired, role: staff ? DEPARTMENT_LABEL[staff.department] : null };
+  const value = { session, staff, login, logout, expired };
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>;
 }
 

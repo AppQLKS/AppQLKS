@@ -2,23 +2,25 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../auth.jsx';
 import { useRoomRequests } from '../../useRoomRequests.js';
 import { Badge, Icon, Logo, StepBar } from '../../components/ui.jsx';
+import { LanguageSwitch, useI18n } from '../../i18n.jsx';
 
 const services = [
-  { to: '/dining', title: 'Room Service & Dining', sub: 'All-day in-suite menu', icon: 'room_service', tone: 'secondary' },
-  { to: '/housekeeping', title: 'Housekeeping', sub: 'Cleaning & amenities', icon: 'cleaning_services', tone: 'primary' },
-  { to: '/concierge', title: 'AI Concierge', sub: 'Local tips & quick orders', icon: 'auto_awesome', tone: 'secondary' },
-  { to: '/checkout', title: 'Express Checkout', sub: 'View charges & depart', icon: 'receipt_long', tone: 'primary' },
+  { to: '/dining', key: 'dining', icon: 'room_service', tone: 'secondary' },
+  { to: '/housekeeping', key: 'housekeeping', icon: 'cleaning_services', tone: 'primary' },
+  { to: '/concierge', key: 'concierge', icon: 'auto_awesome', tone: 'secondary' },
+  { to: '/checkout', key: 'checkout', icon: 'receipt_long', tone: 'primary' },
 ];
 
 const STEP_OF = { pending: 0, in_progress: 2, completed: 4 }; // 4 = mọi bước đã xong
 
-const greeting = () => {
+const greetingKey = () => {
   const h = new Date().getHours();
-  return h < 12 ? 'Good Morning' : h < 18 ? 'Good Afternoon' : 'Good Evening';
+  return h < 12 ? 'home.morning' : h < 18 ? 'home.afternoon' : 'home.evening';
 };
 
 export default function Home() {
   const { session, logout } = useAuth();
+  const { t, srv } = useI18n();
   const requests = useRoomRequests() ?? [];
   // Ưu tiên yêu cầu đang mở; nếu không có thì hiện yêu cầu vừa xong (trong 10 phút) để khách thấy kết quả
   const recentlyDone = (r) => r.status === 'completed' && Date.now() - new Date(r.completedAt).getTime() < 10 * 60_000;
@@ -37,12 +39,12 @@ export default function Home() {
             <span className="font-title text-title-sm">AppHotel</span>
           </div>
           <div className="flex items-center gap-sm">
-            <Badge dot>Active Stay</Badge>
+            <LanguageSwitch />
             <button
               type="button"
               onClick={logout}
-              aria-label="Sign out of this device"
-              title="Sign out"
+              aria-label={t('common.signOutDevice')}
+              title={t('common.signOut')}
               className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors duration-state-change"
             >
               <Icon name="logout" className="text-title-md" />
@@ -50,25 +52,28 @@ export default function Home() {
           </div>
         </div>
         <div className="flex flex-col gap-xs pt-xs">
-          <p className="font-label text-label-md text-secondary">{greeting()}, {firstName}</p>
+          <div className="flex items-center justify-between gap-sm">
+            <p className="font-label text-label-md text-secondary">{t(greetingKey())}, {firstName}</p>
+            <Badge dot>{t('home.activeStay')}</Badge>
+          </div>
           <h1 className="font-headline text-display-lg-mobile">
-            Room {room.number} • {room.type}
+            {t('home.roomTitle', { n: room.number, type: srv(room.type) })}
           </h1>
         </div>
       </header>
 
       <main className="px-page-margin flex flex-col gap-section flex-1">
         <section aria-labelledby="services-heading" className="flex flex-col gap-md">
-          <h2 id="services-heading" className="font-title text-title-md">Suite Services</h2>
+          <h2 id="services-heading" className="font-title text-title-md">{t('home.services')}</h2>
           <div className="grid grid-cols-2 gap-md items-stretch">
             {services.map((s) => (
-              <Link key={s.title} to={s.to} className="card h-full p-lg hover:border-accent transition-colors duration-state-change flex flex-col justify-between gap-lg">
+              <Link key={s.key} to={s.to} className="card h-full p-lg hover:border-accent transition-colors duration-state-change flex flex-col justify-between gap-lg">
                 <div className={`w-11 h-11 rounded-md flex items-center justify-center ${s.tone === 'secondary' ? 'bg-secondary-container' : 'bg-primary-container/60'}`}>
                   <Icon name={s.icon} className={`text-headline-md ${s.tone === 'secondary' ? 'text-secondary' : 'text-primary'}`} />
                 </div>
                 <div className="flex flex-col gap-xs">
-                  <h3 className="font-title text-title-sm text-balance">{s.title}</h3>
-                  <p className="text-body-sm text-on-surface-variant">{s.sub}</p>
+                  <h3 className="font-title text-title-sm text-balance">{t(`home.svc.${s.key}`)}</h3>
+                  <p className="text-body-sm text-on-surface-variant">{t(`home.svc.${s.key}Sub`)}</p>
                 </div>
               </Link>
             ))}
@@ -76,7 +81,7 @@ export default function Home() {
         </section>
 
         <section aria-labelledby="tracker-heading" className="flex flex-col gap-md">
-          <h2 id="tracker-heading" className="font-title text-title-md">Active Request Tracker</h2>
+          <h2 id="tracker-heading" className="font-title text-title-md">{t('home.tracker')}</h2>
           {active ? (
             <article className="card p-lg flex flex-col gap-lg">
               <header className="flex items-start justify-between gap-md">
@@ -85,18 +90,18 @@ export default function Home() {
                     <Icon name={active.type === 'food' ? 'room_service' : 'dry_cleaning'} className="text-title-lg text-primary" />
                   </div>
                   <div className="flex flex-col gap-xs">
-                    <h3 className="font-title text-title-sm">{active.title}</h3>
+                    <h3 className="font-title text-title-sm">{srv(active.title)}</h3>
                     <p className="text-body-sm text-on-surface-variant">
-                      {active.assignee ? `Assigned to ${active.assignee.name}` : 'Waiting for staff'} • Room {active.roomNumber}
+                      {active.assignee ? t('home.assignedTo', { name: active.assignee.name }) : t('home.waitingStaff')} • {t('common.room', { n: active.roomNumber })}
                     </p>
                   </div>
                 </div>
-                <Badge tone={active.status === 'completed' ? 'success' : 'accent'}>{{ pending: 'Sent', in_progress: 'In Progress', completed: 'Done' }[active.status]}</Badge>
+                <Badge tone={active.status === 'completed' ? 'success' : 'accent'}>{t(`home.badge.${active.status}`)}</Badge>
               </header>
-              <StepBar steps={['Sent', 'Assigned', 'On Way', 'Done']} current={STEP_OF[active.status] ?? 0} />
+              <StepBar steps={[t('home.step.sent'), t('home.step.assigned'), t('home.step.onWay'), t('home.step.done')]} current={STEP_OF[active.status] ?? 0} />
             </article>
           ) : (
-            <div className="card p-lg text-body-sm text-on-surface-variant">No active requests right now.</div>
+            <div className="card p-lg text-body-sm text-on-surface-variant">{t('home.noActive')}</div>
           )}
         </section>
       </main>
