@@ -23,8 +23,8 @@ export default function App() {
         <Route path="/kitchen" element={<QueuePage department="kitchen" />} />
         <Route path="/housekeeping" element={<QueuePage department="housekeeping" />} />
         <Route path="/knowledge" element={<KnowledgeBase />} />
-        <Route path="/analytics" element={<Placeholder title="Analytics & Reports" branch="(after MVP)" />} />
-        <Route path="*" element={<Placeholder title="Page not found" />} />
+        <Route path="/analytics" element={<Placeholder titleKey="page.analytics" branchKey="page.afterMvp" />} />
+        <Route path="*" element={<Placeholder titleKey="page.notFound" />} />
       </Route>
     </Routes>
   );
