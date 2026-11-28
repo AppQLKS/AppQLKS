@@ -54,7 +54,8 @@ export default function TaskDetail() {
 
   const mine = task.assignedTo === staff.id;
   const supervisor = SUPERVISORS.includes(staff.department);
-  const canClaim = task.status === 'pending' && (supervisor || staff.department === task.department);
+  // Lễ tân không nhận việc; quản lý làm thay được
+  const canClaim = task.status === 'pending' && (staff.department === 'manager' || staff.department === task.department);
   const canAct = task.status === 'in_progress' && (mine || supervisor);
 
   // Đồng hồ dừng khi đã xong

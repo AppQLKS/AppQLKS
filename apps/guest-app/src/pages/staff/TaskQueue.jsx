@@ -9,7 +9,7 @@ import { STAFF_NAV, elapsedMinutes, itemsText } from './staffNav.js';
 
 /** Giống quy tắc ở server. */
 const canHandle = (staff, task) =>
-  staff.department === 'manager' || staff.department === 'reception' || staff.department === task.department;
+  staff.department === 'manager' || staff.department === task.department; // lễ tân không nhận việc
 
 const FILTERS = [
   { id: 'all', label: 'queue.my' },

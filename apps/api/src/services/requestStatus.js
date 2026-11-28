@@ -5,9 +5,12 @@ import { markRoomReady } from './rooms.js';
 const SUPERVISORS = ['reception', 'manager'];
 const isSupervisor = (staff) => SUPERVISORS.includes(staff.department);
 
-/** Bộ phận nào được nhận việc của bộ phận nào. */
+/**
+ * Ai được nhận việc: đúng bộ phận (bếp / buồng phòng), hoặc quản lý khi cần làm thay.
+ * Lễ tân không nhận việc: chỉ theo dõi, huỷ, nhận phòng và trả phòng.
+ */
 export function canHandle(staff, request) {
-  return isSupervisor(staff) || staff.department === departmentOf(request.type);
+  return staff.department === 'manager' || staff.department === departmentOf(request.type);
 }
 
 /** Nhận việc: chỉ khi đang chờ. Node xử lý tuần tự nên kiểm tra + gán là nguyên tử. */
