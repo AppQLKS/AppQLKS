@@ -93,3 +93,13 @@ test('staff logout ends the session', async () => {
   assert.equal((await api.post('/auth/staff/logout', {}, token)).status, 204);
   assert.equal((await api.get('/requests', token)).status, 401);
 });
+
+test('reception does not claim tasks; managers can step in', async () => {
+  const maya = await api.staffToken('RC-01');
+  const david = await api.staffToken('MG-01');
+  // REQ-409: yêu cầu đồ dùng (buồng phòng) đang chờ
+  assert.equal((await api.post('/requests/REQ-409/claim', {}, maya)).status, 403);
+  const queue = await (await api.get('/requests?room=202', maya)).json();
+  assert.equal(queue.find((r) => r.id === 'REQ-409').status, 'pending');
+  assert.equal((await api.post('/requests/REQ-409/claim', {}, david)).status, 200);
+});

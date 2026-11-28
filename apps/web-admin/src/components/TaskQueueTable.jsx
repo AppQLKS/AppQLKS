@@ -4,9 +4,8 @@ import { useStaff } from '../staff.jsx';
 import { useI18n } from '../i18n.jsx';
 import { Icon, StatusBadge, initials } from './ui.jsx';
 
-/** Giống quy tắc ở server: bếp chỉ nhận việc bếp, buồng phòng nhận việc buồng phòng. */
-const canClaim = (staff, task) =>
-  staff.department === 'manager' || staff.department === 'reception' || staff.department === task.department;
+/** Giống quy tắc ở server: bếp chỉ nhận việc bếp, buồng phòng nhận việc buồng phòng; lễ tân không nhận việc, quản lý làm thay được. */
+const canClaim = (staff, task) => staff.department === 'manager' || staff.department === task.department;
 
 const TABS = ['all', 'kitchen', 'housekeeping'];
 const COLUMNS = ['id', 'room', 'service', 'elapsed', 'staff', 'status'];
