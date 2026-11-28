@@ -55,6 +55,7 @@ export default function Layout() {
     { to: '/housekeeping', label: t('nav.housekeeping'), icon: 'cleaning_services', badge: open('housekeeping'), tone: 'bg-blue-tint text-on-blue-tint' },
     { to: '/knowledge', label: t('nav.knowledge'), icon: 'auto_awesome' },
     { to: '/analytics', label: t('nav.analytics'), icon: 'bar_chart' },
+    ...(staff?.department === 'manager' ? [{ to: '/staff', label: t('nav.staff'), icon: 'badge' }] : []),
   ];
 
   return (

@@ -18,7 +18,8 @@ export function authenticateStaff(login, password) {
   const staff = findStaffByLogin(login);
   // Vẫn chạy verify khi không có tài khoản để thời gian phản hồi tương đương
   const ok = verifyPassword(password, staff?.passwordHash ?? DUMMY_HASH);
-  return staff && ok ? staff : null;
+  // Tài khoản bị khoá trả lỗi giống sai mật khẩu (không lộ tài khoản nào tồn tại)
+  return staff && ok && staff.active !== false ? staff : null;
 }
 
 export function createStaffSession(staff) {
@@ -34,7 +35,17 @@ export function resolveStaffSession(token) {
     sessions.delete(token);
     return null;
   }
-  return db.staff.find((s) => s.id === session.staffId) ?? null;
+  const staff = db.staff.find((s) => s.id === session.staffId);
+  if (!staff || staff.active === false) {
+    sessions.delete(token);
+    return null;
+  }
+  return staff;
+}
+
+/** Đăng xuất mọi thiết bị của một nhân viên (đổi mật khẩu, khoá tài khoản). */
+export function destroySessionsOf(staffId) {
+  for (const [token, s] of sessions) if (s.staffId === staffId) sessions.delete(token);
 }
 
 export function destroyStaffSession(token) {

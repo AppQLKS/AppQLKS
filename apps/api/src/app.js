@@ -9,6 +9,7 @@ import { chatRouter } from './routes/chat.js';
 import { hotelInfo } from './data/hotelInfo.js';
 import checkoutRouter from './routes/checkout.js';
 import meRouter from './routes/me.js';
+import staffRouter from './routes/staff.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 /**
@@ -35,6 +36,7 @@ export function createApp(options = {}) {
   // Kiến thức khách sạn mà chatbot dùng (công khai, hiển thị ở trang AI Knowledge Base)
   app.get('/api/hotel-info', (req, res) => res.json(hotelInfo));
   app.use('/api/checkout', checkoutRouter);
+  app.use('/api/staff', staffRouter);
 
   app.use(notFound);
   app.use(errorHandler);
